@@ -58,6 +58,11 @@ jobs:
           EOF
           python3 - <<'PY'
           from pathlib import Path
+          project=Path('project.godot')
+          settings=project.read_text()
+          assert '[rendering]' in settings
+          settings=settings.replace('[rendering]', '[rendering]\ntextures/vram_compression/import_etc2_astc=true', 1)
+          project.write_text(settings)
           f=Path('export_presets.cfg')
           s=f.read_text()
           assert 'package/unique_name="com.sergiomrge.dungeonsfires"' in s
@@ -72,8 +77,13 @@ jobs:
           Godot_v4.6.1-stable_linux.x86_64 --headless --editor --import --quit 2>&1 | tee /tmp/preview-import.log
           if grep -E 'SCRIPT ERROR|ERROR:' /tmp/preview-import.log; then exit 1; fi
       - name: Export signed debug preview
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/preview-debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           set -euo pipefail
+          cp "$HOME/.android/dungeons_preview.keystore" "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
           mkdir -p /tmp/preview
           Godot_v4.6.1-stable_linux.x86_64 --headless --export-debug Android /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
           test -s /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
