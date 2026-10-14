@@ -1,6 +1,15 @@
-# Dungeons Fires: As Cinco Brasas - v0.2.0
+# Dungeons Fires: As Cinco Brasas - v0.3.0
 
 Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-fire. Abra o `project.godot` na raiz deste repositório.
+
+## Avanço v0.3 — Refúgio vivo e legibilidade do combate
+
+- Refúgio começa a recuperar pontos de luz, bandeirolas e vegetação conforme conquistas da campanha e melhorias das oficinas. São sobreposições leves, sem alterar colisão ou saves antigos.
+- Neris passa a aparecer no hub após as três primeiras expedições; o menu **Diário de Edrava** mostra progresso por capítulo, brasas recuperadas e próxima masmorra.
+- Corrida ganha pequenas nuvens de poeira; esquiva cria imagens residuais; golpes exibem arcos luminosos sincronizados com a janela de impacto. Os 112 frames autorados continuam sendo a base.
+- Suíte dedicada testa navegação do diário, desbloqueio do NPC, estados de combate e controles ao voltar ao hub. O workflow publica também capturas reais do refúgio recuperado e do diário, além do arquivo-fonte atualizado.
+
+**Status:** nova implementação de código. O APK presente em `builds/` ainda corresponde à v0.1.0 e **não** demonstra estas alterações. A v0.3 deve passar pelo CI e pela avaliação real de jogabilidade/visual no Android antes de ser considerada aprovada.
 
 ## Nova direção visual v0.2
 
@@ -18,7 +27,7 @@ Visual de fantasia anime inspirado na referência Ragnarok Online: seis ambiente
 
 ## Escopo real e limites
 
-Esta é a primeira versão jogável do projeto, não o lançamento final descrito no GDD. Os personagens e ambientes ilustrados são originais. As poses produzidas foram integradas aos estados reais de combate; transições, alinhamento dos sprites e acabamento visual ainda podem ser refinados.
+Esta é uma base jogável em evolução, não o lançamento final descrito no GDD. Os personagens e ambientes ilustrados são originais. As poses produzidas foram integradas aos estados reais de combate; transições, alinhamento dos sprites e acabamento visual ainda podem ser refinados.
 
 As quinze expedições usam encontros e arenas derivados de templates; não são quinze masmorras finais com level design exclusivo. Há três arquétipos comuns e variações de chefes. Cada classe tem duas técnicas fixas nesta versão; as 18 skills planejadas e as árvores completas ainda não estão implementadas. Talentos atuais aumentam vida/ataque. Estruturas Arquivo/Quartel têm aprimoramento persistente e leitura narrativa, mas missões pessoais/arena/contratos ainda são futuros. Não há afixos aleatórios, desmontagem, loadouts, Veterano ou quatro sets visuais de armadura por herói.
 

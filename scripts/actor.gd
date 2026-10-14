@@ -177,6 +177,10 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO,0,Vector2(1,.30))
 	draw_circle(Vector2.ZERO,23*size_scale,Color(0,0,0,.30*fade))
 	draw_set_transform(Vector2.ZERO)
+	if state=="run" and int(anim_clock*12.0)%4 < 2:
+		var dust: Color = Color(.85,.81,.72,.22)
+		draw_circle(Vector2(-facing*18,-3),5.0*size_scale,dust)
+		draw_circle(Vector2(-facing*30,-6),3.0*size_scale,Color(.91,.85,.73,.13))
 	if state=="windup":
 		var warn = Color(1,.36,.17,.45+sin(anim_clock*14)*.15)
 		draw_arc(Vector2.ZERO,60 if boss else 43,0,TAU,32,warn,4)
@@ -192,7 +196,15 @@ func _draw() -> void:
 	if state == "hurt": lean = -.12
 	if state == "death": lean = (1.0 - fade) * PI / 2
 	draw_set_transform(Vector2(0, bob), lean * facing, Vector2(facing, 1))
+	if state=="dodge":
+		for ghost_index in range(3,0,-1):
+			var ghost_color: Color = Color(.79,.90,1.0,(4-ghost_index)*.085*fade)
+			draw_texture_rect_region(atlas,Rect2(-48*size_scale-ghost_index*direction.x*18,-90*size_scale-ghost_index*direction.y*10,96*size_scale,96*size_scale),Rect2(2*192,0,192,192),ghost_color)
 	draw_texture_rect_region(atlas, Rect2(-48*size_scale,-90*size_scale,96*size_scale,96*size_scale), Rect2(frame*192,0,192,192), tint)
+	if state=="attack" and timer<duration*.58 and timer>duration*.20:
+		var slash_color: Color = Color(.99,.87,.56,.33 if is_player else .24)
+		draw_arc(Vector2(24,-62*size_scale),39*size_scale,-1.42,1.05,24,slash_color,3.5)
+		if is_player:draw_arc(Vector2(24,-62*size_scale),45*size_scale,-1.23,.93,24,Color(.98,.97,.76,.23),1.8)
 	draw_set_transform(Vector2.ZERO)
 	if not is_player and hp>0:
 		var w = 85 if boss else 54

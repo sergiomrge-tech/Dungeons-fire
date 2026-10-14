@@ -38,5 +38,10 @@ func run() -> void:
 	game.progress.d.run={};game.progress.d.cleared=[0,1,2,3,4,5]
 	game.progress.switch_hero("neris");game.start_dungeon(6)
 	game.player.request_attack();await capture("07_ranger")
+	game.progress.d.cleared=[0,1,2,3,4,5]
+	game.progress.d.hub.forge=2
+	game.progress.d.hub.sanctuary=2
+	game.show_hub();await capture("08_hub_recovered")
+	game.show_journal();await capture("09_journal")
 	game.queue_free();await process_frame
 	quit()

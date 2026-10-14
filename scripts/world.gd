@@ -59,6 +59,8 @@ func _draw() -> void:
 		var y = fmod(i*31.0+clock*(12 if theme_index==2 else -9)+720,570)
 		var color: Color = colors[theme_index]; color.a = .22 + .2 * sin(clock+i)
 		draw_circle(Vector2(x,y),1.7 if theme_index==2 else 1.2,color)
+	if theme_index == 5 and game != null and game.progress != null and game.screen in ["menu","hub","journal"]:
+		draw_hub_recovery()
 	if theme_index == 1:
 		for i in range(8):
 			var p = Vector2(270+i*93, 272+sin(i*2.4)*43)
@@ -66,6 +68,38 @@ func _draw() -> void:
 	if game.screen == "combat":
 		for i in range(12):
 			draw_rect(Rect2(0,600+i*10,1280,10),Color(.12,.18,.28,i*.011))
+# Decorative restoration grows from actual campaign and workshop progression.
+# These ambient cues never alter collisions or consume gameplay resources.
+func draw_hub_recovery() -> void:
+	var victories: int = game.progress.d.cleared.size()
+	var restored: int = 0
+	for key in ["forge","sanctuary","botica","archive","barracks"]:
+		restored += maxi(0,int(game.progress.d.hub[key])-1)
+	var lights: Array[Vector2] = [Vector2(286,343),Vector2(621,313),Vector2(934,349),Vector2(1113,338)]
+	var count: int = mini(lights.size(),1 + victories/3 + restored/2)
+	for i in range(count):
+		var pos: Vector2 = lights[i]
+		var pulse: float = .5 + .5 * sin(clock*2.1+i*1.6)
+		draw_circle(pos,17.0+pulse*7.0,Color(1,.72,.33,.055+pulse*.045))
+		draw_circle(pos,4.0+pulse*.9,Color(1,.81,.50,.38+pulse*.34))
+		for spark in range(3):
+			var direction: float = float(spark)*TAU/3.0+float(i)
+			var drift: Vector2 = Vector2(cos(direction),sin(direction))* (11.0+spark*3.0)
+			draw_circle(pos+drift,1.0,Color(1,.84,.59,.16+pulse*.15))
+	if victories >= 3:
+		var banners: int = mini(8,3+victories/3+restored)
+		for i in range(banners):
+			var anchor: Vector2 = Vector2(445+i*44,234+sin(i*.5)*10)
+			var fabric: Color = Color("c85f5c") if i%2==0 else Color("e7c77d")
+			fabric.a = .83
+			draw_colored_polygon(PackedVector2Array([anchor,anchor+Vector2(12,1),anchor+Vector2(6,19+sin(clock*1.6+i)*2)]),fabric)
+	if restored >= 2:
+		for i in range(mini(10,restored*2+victories/3)):
+			var pos: Vector2 = Vector2(178+i*94,533+sin(float(i)*3.2)*18)
+			var flutter: float = sin(clock*2.5+i)*3.0
+			draw_line(pos,pos+Vector2(flutter,-8),Color("668d65"),2.0)
+			draw_circle(pos+Vector2(flutter,-9),2.7,Color("efb2cb") if i%2==0 else Color("ffe19b"))
+
 func draw_effects() -> void:
 	for e in effects:
 		var alpha = e.time/e.duration

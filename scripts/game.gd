@@ -139,7 +139,7 @@ func show_menu() -> void:
 	button("RETOMAR EXPEDIÇÃO",Vector2(84,410),Vector2(458,55),resume_run,progress.d.run.is_empty())
 	button("HISTÓRIA",Vector2(84,482),Vector2(220,53),func():show_lore(false))
 	button("OPÇÕES",Vector2(320,482),Vector2(222,53),func():previous_screen="menu";show_settings())
-	label("v0.2.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("617a96"))
+	label("v0.3.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("617a96"))
 	var hero=spawn_actor(progress.d.hero,Vector2(870,550),true,180,28);hero.size_scale=2.7
 	label("Seu próximo capítulo começa aqui.",Vector2(710,590),Vector2(500,35),21,Color("ffffff"))
 
@@ -164,10 +164,13 @@ func show_hub() -> void:
 	spawn_actor(progress.d.hero,Vector2(635,488),true,progress.hero_stats().hp,progress.hero_stats().attack)
 	spawn_actor("knight",Vector2(289,473),false,100,0)
 	spawn_actor("maela",Vector2(997,488),false,100,0)
+	if progress.d.cleared.size() >= 3:
+		spawn_actor("neris",Vector2(1138,493),false,100,0)
 	panel(Vector2(190,493),Vector2(204,38));label("Doran • Forja %d"%progress.d.hub.forge,Vector2(204,499),Vector2(190,28),17)
 	panel(Vector2(903,508),Vector2(205,38));label("Iria • Arquivo %d"%progress.d.hub.archive,Vector2(917,514),Vector2(190,28),17)
 	panel(Vector2(530,500),Vector2(215,38));label("%s • Nível %d"%[progress.d.hero.capitalize(),progress.hero_stats().level],Vector2(545,506),Vector2(190,28),17)
 	button("MAPA DE MASMORRAS  →",Vector2(452,558),Vector2(376,58),func():show_map(progress.stage()))
+	button("DIÁRIO DE EDRAVA",Vector2(1038,121),Vector2(211,49),show_journal)
 	button("MOCHILA",Vector2(28,643),Vector2(174,52),func():previous_screen="hub";show_inventory())
 	button("FORJA",Vector2(215,643),Vector2(155,52),show_forge)
 	button("REFÚGIO",Vector2(383,643),Vector2(166,52),show_buildings)
@@ -180,9 +183,32 @@ func show_hub() -> void:
 		progress.d.tutorial=true;progress.save()
 		toast("Comece na Mina dos Sinos pelo mapa. Equipe e melhore na forja.",7)
 
+func show_journal() -> void:
+	clear_ui();screen="journal";world.change_theme(5)
+	panel(Vector2(65,111),Vector2(1150,565))
+	title("DIÁRIO DE EDRAVA","Iria registra os nomes restaurados e os caminhos abertos.")
+	var completed: int = progress.d.cleared.size()
+	var next_index: int = progress.unlocked()
+	label("CRÔNICAS DAS CINCO BRASAS",Vector2(100,144),Vector2(800,42),28,Color("355882"))
+	label("%d / 15 expedições concluídas"%completed,Vector2(830,151),Vector2(330,34),20,Color("a47436"))
+	for chapter in range(5):
+		var total: int = 0
+		for idx in range(chapter*3,chapter*3+3):
+			if progress.d.cleared.has(idx): total += 1
+		var y: float = 207.0 + chapter*66.0
+		var is_next: bool = (next_index / 3) == chapter and not progress.d.cleared.has(14)
+		var region_title: String = str(db.regions[chapter])
+		var status: String = "BRASA RECUPERADA" if total==3 else ("%d de 3 expedições" % total)
+		label(("✦  " if total==3 else ("➤  " if is_next else "•  "))+region_title,Vector2(105,y),Vector2(670,31),22,Color("a47436") if total==3 else Color("304968"))
+		label(status,Vector2(822,y+2),Vector2(330,29),18,Color("547f5e") if total==3 else Color("617a96"))
+	var destination: String = "Os cinco guardiões libertados. O Refúgio floresce." if progress.d.cleared.has(14) else ("Próxima jornada: "+str(db.dungeons[next_index].name))
+	label(destination,Vector2(103,557),Vector2(1050,38),19,Color("355882"))
+	button("IR PARA O MAPA",Vector2(105,606),Vector2(365,53),func():show_map(progress.stage()))
+	button("VOLTAR AO REFÚGIO",Vector2(794,606),Vector2(368,53),show_hub)
+
 func show_map(region: int = 0) -> void:
 	clear_ui();screen="map";current_map_region=clampi(region,0,4);world.change_theme(current_map_region)
-	panel(Vector2(25,20),Vector2(1230,677));title("MAPA DE EDRAVA","Escolha uma região e uma expedição. Cada vitória abre o próximo caminho.")
+	panel(Vector2(25,20),Vector2(1230,677));title("MAPA DE EDRAVA","%d/15 expedições concluídas • Cada vitória abre o próximo caminho."%progress.d.cleared.size())
 	for r in range(5):
 		button("%d • %s" %[r+1,db.regions[r].split(" ")[0]],Vector2(52+r*240,124),Vector2(223,55),func():show_map(r),false)
 	label(db.regions[current_map_region],Vector2(57,204),Vector2(1100,40),29,Color("355882"))
