@@ -1,0 +1,1 @@
+APK v0.1.0, arm64-v8a, Android 7.0 ou superior. SHA-256: `49d943588a4d2d7ded4ed91c976d753d82ed59bb5e0d58009b5908dd0122446b`. Assinatura e alinhamento documentados em `docs/QA_v0_1.md`; instalação em aparelho físico ainda pendente.
