@@ -22,12 +22,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android build packages
+      - name: Install Android build packages using runner SDK
         run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
           yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "build-tools;35.0.1" "platforms;android-35" "cmdline-tools;latest" "cmake;3.10.2.4988404" "ndk;28.1.13356709"
+          sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "build-tools;35.0.1" "platforms;android-35"
       - name: Install pinned Godot and Android export templates
         run: |
           set -euo pipefail
@@ -70,11 +72,8 @@ jobs:
           Godot_v4.6.1-stable_linux.x86_64 --headless --editor --import --quit 2>&1 | tee /tmp/preview-import.log
           if grep -E 'SCRIPT ERROR|ERROR:' /tmp/preview-import.log; then exit 1; fi
       - name: Export signed debug preview
-        env:
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/.android-not-used
         run: |
           set -euo pipefail
-          unset GODOT_ANDROID_KEYSTORE_DEBUG_PATH
           mkdir -p /tmp/preview
           Godot_v4.6.1-stable_linux.x86_64 --headless --export-debug Android /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
           test -s /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
