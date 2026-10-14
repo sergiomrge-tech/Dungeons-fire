@@ -1,0 +1,42 @@
+name: Publish Android preview APK
+on:
+  push:
+    branches:
+      - build/android-preview-v0.3
+    paths:
+      - '.github/workflows/publish-preview.yml'
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download already-verified APK from successful build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/preview
+          gh run download 38622540008 --repo "$GITHUB_REPOSITORY" --name Dungeons-Fires-Android-v030-preview --dir /tmp/preview
+          test -s /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
+          test -s /tmp/preview/sha256.txt
+          cd /tmp/preview
+          sha256sum -c sha256.txt
+          unzip -t Dungeons_Fires_v0_3_0_preview.apk | tail -n 2
+      - name: Create download-friendly GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "v0.3.0-preview" \
+            /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk \
+            /tmp/preview/sha256.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Dungeons Fires v0.3.0 — Android Preview" \
+            --notes "Prévia para Android 64 bits: refúgio vivo, Diário de Edrava, novos efeitos de combate e arte fantasia original. APK debug assinado e verificado em GitHub Actions; identificador independente com.sergiomrge.dungeonsfires.preview, não substitui a v0.1.0. Não testado em dispositivo físico. Para instalar futuras prévias com nova assinatura debug, pode ser necessário desinstalar apenas o app Preview." \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --latest=false
