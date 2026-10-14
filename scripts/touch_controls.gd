@@ -58,21 +58,51 @@ func move_stick(pos: Vector2) -> void:
 
 func _draw() -> void:
 	if not active or font==null: return
-	draw_circle(stick_center,85,Color(.08,.09,.13,.60))
-	draw_arc(stick_center,85,0,TAU,50,Color(.74,.57,.32,.6),3)
-	draw_circle(stick_center+thumb,34,Color(.50,.53,.58,.75))
-	draw_arc(stick_center+thumb,34,0,TAU,32,Color(.85,.77,.55,.9),2)
+	draw_circle(stick_center,85,Color(.90,.95,1,.30))
+	draw_arc(stick_center,85,0,TAU,50,Color(.80,.89,1,.85),2)
+	draw_arc(stick_center,70,0,TAU,50,Color(.28,.42,.63,.30),1)
+	draw_circle(stick_center+thumb,34,Color(.90,.95,1,.80))
+	draw_arc(stick_center+thumb,34,0,TAU,32,Color(.35,.51,.72,.9),2)
+	for i in range(4):
+		var dir=Vector2.RIGHT.rotated(i*PI/2)
+		draw_line(stick_center+dir*52,stick_center+dir*65,Color(.90,.96,1,.7),3)
 	var labels = {"attack":"GOLPE","dodge":"ESQUIVA","skill0":"TÉCNICA","skill1":"PODER","supreme":"BRASA","potion":"CURAR"}
 	for name in buttons:
 		var center: Vector2 = buttons[name]
 		var r = 61 if name=="attack" else 45
 		var held = touches.values().has(name)
-		draw_circle(center,r,Color(.15,.14,.18,.83) if not held else Color(.39,.25,.17,.9))
-		draw_arc(center,r,0,TAU,40,Color(.79,.61,.34,.95),3)
+		draw_circle(center+Vector2(0,3),r+1,Color(.12,.21,.35,.26))
+		draw_circle(center,r,Color(.91,.95,1,.88) if not held else Color(.69,.82,.97,.96))
+		draw_arc(center,r,0,TAU,40,Color(.40,.57,.78,.95),2)
+		draw_arc(center,r-5,0,TAU,40,Color(1,1,1,.8),1)
+		draw_symbol(name,center-Vector2(0,8),Color("486d99"))
 		var label: String = labels[name]
 		var cd = float(cooldowns.get(name,0))
 		if cd>0: label="%.1f" % cd
-		var fs = 16 if name!="attack" else 20
+		var fs = 12 if name!="attack" else 15
 		var tw = font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,fs).x
-		draw_string(font,center-Vector2(tw/2,-5),label,HORIZONTAL_ALIGNMENT_LEFT,-1,fs,Color(.96,.87,.68))
+		draw_string(font,center+Vector2(-tw/2,27),label,HORIZONTAL_ALIGNMENT_LEFT,-1,fs,Color("2d486b"))
 		if name=="supreme":draw_arc(center,r-6,-PI/2,-PI/2+TAU*float(cooldowns.get("charge",0))/100,35,Color(.96,.46,.19),3)
+
+func draw_symbol(name: String, at: Vector2, color: Color) -> void:
+	match name:
+		"attack":
+			draw_line(at+Vector2(-13,16),at+Vector2(17,-18),color,5,true)
+			draw_line(at+Vector2(-17,2),at+Vector2(0,17),color,4,true)
+			draw_line(at+Vector2(-16,19),at+Vector2(-20,23),color,6,true)
+		"dodge":
+			for i in range(2):
+				var x=i*13-13
+				draw_polyline(PackedVector2Array([at+Vector2(x-5,-13),at+Vector2(x+7,0),at+Vector2(x-5,13)]),color,4,true)
+		"potion":
+			draw_circle(at+Vector2(0,6),13,Color("8cc8a4"))
+			draw_rect(Rect2(at+Vector2(-6,-15),Vector2(12,12)),color)
+			draw_line(at+Vector2(-7,6),at+Vector2(7,6),Color.WHITE,3)
+			draw_line(at+Vector2(0,-1),at+Vector2(0,13),Color.WHITE,3)
+		_:
+			var points=PackedVector2Array()
+			for i in range(10):
+				var radius=19.0 if i%2==0 else 8.0
+				points.append(at+Vector2.UP.rotated(i*PI/5)*radius)
+			draw_colored_polygon(points,Color("d8a455") if name=="supreme" else color)
+			draw_circle(at,4,Color.WHITE)

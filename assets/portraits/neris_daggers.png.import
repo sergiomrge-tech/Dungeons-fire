@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dd1f0tg6qkh8j"
-path="res://.godot/imported/world_4.png-0753b660a1955fe4885bd5be1416339e.ctex"
+uid="uid://bjjbtphxyd7xo"
+path="res://.godot/imported/neris_daggers.png-5c316ecd37714f60a340bfe990e992df.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/world_4.png"
-dest_files=["res://.godot/imported/world_4.png-0753b660a1955fe4885bd5be1416339e.ctex"]
+source_file="res://assets/portraits/neris_daggers.png"
+dest_files=["res://.godot/imported/neris_daggers.png-5c316ecd37714f60a340bfe990e992df.ctex"]
 
 [params]
 

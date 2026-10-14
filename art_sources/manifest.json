@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "method": "built-in ImageGen; technical slicing via Godot Image API",
+  "sources": [
+    {
+      "file": "environments_atlas.png",
+      "sha256": "daa7269308a9ab739db81ca420a25e15d2ba358cf64930a994d7837e30317c5a",
+      "production_prompt_specification": "Six production environments, 2 columns x 3 rows: bell mine, aquatic monastery, snow sanctuary, desert forge, moonlit archive, sunlit fantasy hub. Elevated painted orthographic perspective, classic Korean anime MMORPG palette. No characters/UI/text. Keep open walkable lane at 55–78% image height. Original fantasy architecture and vegetation."
+    },
+    {
+      "file": "heroes_atlas.png",
+      "sha256": "4e73850badfac3abbaff51b536cb6645b62df99931d8e9456be6236bb8ecbeec",
+      "production_prompt_specification": "Transparent production sprite atlas: 8 columns x 6 rows; Varek sword/shield and hammer, Maela staff and book, Neris bow and daggers. Detailed charming anime fantasy sprites, 3 heads tall, right-facing 3/4 view. Columns idle, three run poses, attack windup/contact/follow-through, special. Uniform foot baseline, complete weapons, no text or scenery."
+    },
+    {
+      "file": "enemies_atlas.png",
+      "sha256": "c25544fd452535dd101669ff0b783b80f1252edf267a72945204d74a0a6db863",
+      "production_prompt_specification": "Transparent production sprite atlas: 8 columns x 8 rows; ash knight, rogue archer, cave brute, Garron mine guardian, Sereia water mage, frost king, terracotta colossus and Severan archive mage. Same 8 pose columns as heroes, original designs, clean readable silhouettes and consistent scale, no text or scenery."
+    }
+  ],
+  "constraints": [
+    "original characters and environments",
+    "no extracted franchise assets",
+    "sprite frames used by actual gameplay states",
+    "masters excluded from Godot export"
+  ]
+}

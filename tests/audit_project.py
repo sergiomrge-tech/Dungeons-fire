@@ -37,7 +37,7 @@ for required in ['project.godot', 'scenes/main.tscn', 'scripts/game.gd', 'script
         errors.append(f'Missing source: {required}')
 catalog = json.loads((root / 'data/catalog.json').read_text(encoding='utf-8'))
 for index in range(6):
-    if not (root / f'assets/world_{index}.png').is_file():
+    if not (root / f'assets/painted_worlds/world_{index}.webp').is_file():
         errors.append(f'Missing world theme {index}')
 for actor in ['varek', 'maela', 'neris', 'knight', 'archer', 'brute', 'garron',
               'severan', 'sereia', 'colosso', 'rei', 'varek_hammer', 'maela_focus', 'neris_daggers']:

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://du4ua22821pbr"
-path="res://.godot/imported/world_2.png-69a70821b4a02d555122b0ef30a171d8.ctex"
+uid="uid://de0vgd4fncply"
+path="res://.godot/imported/severan.png-44c540600a3cc9a3b0f2fed9c626df14.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/world_2.png"
-dest_files=["res://.godot/imported/world_2.png-69a70821b4a02d555122b0ef30a171d8.ctex"]
+source_file="res://assets/portraits/severan.png"
+dest_files=["res://.godot/imported/severan.png-44c540600a3cc9a3b0f2fed9c626df14.ctex"]
 
 [params]
 

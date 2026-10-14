@@ -30,13 +30,14 @@ var aim: Vector2 = Vector2.ZERO
 var id: int = 0
 var pending_attack: bool = false
 var atlas: Texture2D
-var size_scale: float = 1.65
+var size_scale: float = 1.35
 
 func setup(owner_game, actor_kind: String, player: bool, life: float, damage: float, boss_actor: bool = false) -> void:
 	game = owner_game; kind = actor_kind; is_player = player; boss = boss_actor
 	hp = life; max_hp = life; attack_power = damage
 	atlas = load("res://assets/%s.png" % kind)
-	size_scale = 2.25 if boss else (1.65 if is_player else 1.5)
+	size_scale = 1.85 if boss else (1.35 if is_player else 1.25)
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	cooldown = .6+float(id%4)*.35
 
 func start_action(name: String, action_type: String, seconds: float) -> void:
@@ -180,16 +181,33 @@ func _draw() -> void:
 		var warn = Color(1,.36,.17,.45+sin(anim_clock*14)*.15)
 		draw_arc(Vector2.ZERO,60 if boss else 43,0,TAU,32,warn,4)
 		draw_line(Vector2.ZERO,(aim-position).normalized()*95,warn,4)
-	var row = {"idle":0,"run":1,"attack":2,"dodge":3,"hurt":4,"death":5,"cast":6,"windup":2}.get(state,0)
-	var frame = int(anim_clock*(13 if state=="run" else 8))%8
-	if state in ["attack","cast","dodge","hurt","death"]: frame = clampi(int((1-timer/maxf(duration,.01))*8),0,7)
-	if state=="windup": frame=0
+	var frame = visual_frame()
 	var tint = Color.WHITE
 	if invuln>0 and state=="hurt": tint=Color(1,.6,.55)
-	draw_set_transform(Vector2.ZERO,0,Vector2(facing,1))
-	draw_texture_rect_region(atlas,Rect2(-48*size_scale,-84*size_scale,96*size_scale,96*size_scale),Rect2(frame*96,row*96,96,96),tint)
+	tint.a = fade
+	var bob = sin(anim_clock * 3.0) * .7
+	var lean = 0.0
+	if state == "run": bob = -absf(sin(anim_clock * 12.0)) * 2.0
+	if state == "dodge": lean = .27; bob = 8
+	if state == "hurt": lean = -.12
+	if state == "death": lean = (1.0 - fade) * PI / 2
+	draw_set_transform(Vector2(0, bob), lean * facing, Vector2(facing, 1))
+	draw_texture_rect_region(atlas, Rect2(-48*size_scale,-90*size_scale,96*size_scale,96*size_scale), Rect2(frame*192,0,192,192), tint)
 	draw_set_transform(Vector2.ZERO)
 	if not is_player and hp>0:
 		var w = 85 if boss else 54
-		draw_rect(Rect2(-w/2.0,-94*size_scale,w,6),Color(.12,.10,.15,.9))
-		draw_rect(Rect2(-w/2.0,-94*size_scale,w*hp/max_hp,6),Color(.86,.27,.22))
+		draw_rect(Rect2(-w/2.0-1,-96*size_scale-1,w+2,7),Color("304660"))
+		draw_rect(Rect2(-w/2.0,-96*size_scale,w,5),Color("e8eaf0"))
+		draw_rect(Rect2(-w/2.0,-96*size_scale,w*hp/max_hp,5),Color("ce5b70"))
+
+func visual_frame() -> int:
+	# Eight authored poses per character/weapon; timing follows actual hit windows.
+	match state:
+		"run": return [1, 2, 3, 2][int(anim_clock * 10) % 4]
+		"windup": return 4
+		"attack":
+			var t = 1.0 - timer / maxf(duration, .01)
+			return 4 if t < .42 else (5 if t < .72 else 6)
+		"cast": return 7
+		"dodge": return [1, 2, 3][clampi(int((1.0-timer/maxf(duration,.01))*3),0,2)]
+	return 0

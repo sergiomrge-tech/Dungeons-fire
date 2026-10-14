@@ -1,6 +1,10 @@
-# Dungeons Fires: As Cinco Brasas - v0.1.0
+# Dungeons Fires: As Cinco Brasas - v0.2.0
 
 Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-fire. Abra o `project.godot` na raiz deste repositório.
+
+## Nova direção visual v0.2
+
+Visual de fantasia anime inspirado na referência Ragnarok Online: seis ambientes pintados, quatorze conjuntos de sprites, 112 poses, retratos e interface clara. Detalhes e limitações em [VISUAL_DIRECTION_v0_2](docs/VISUAL_DIRECTION_v0_2.md). O APK disponível em `builds/` ainda é a v0.1.0; esta atualização é do projeto Godot.
 
 ## O que esta versão permite jogar
 
@@ -14,7 +18,7 @@ Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-f
 
 ## Escopo real e limites
 
-Esta é a primeira versão jogável do projeto, não o lançamento final descrito no GDD. O desenho pixel art é original e inicial, com poses animadas construídas por código. A fidelidade artística à direção solicitada ainda requer avaliação e refinamento.
+Esta é a primeira versão jogável do projeto, não o lançamento final descrito no GDD. Os personagens e ambientes ilustrados são originais. As poses produzidas foram integradas aos estados reais de combate; transições, alinhamento dos sprites e acabamento visual ainda podem ser refinados.
 
 As quinze expedições usam encontros e arenas derivados de templates; não são quinze masmorras finais com level design exclusivo. Há três arquétipos comuns e variações de chefes. Cada classe tem duas técnicas fixas nesta versão; as 18 skills planejadas e as árvores completas ainda não estão implementadas. Talentos atuais aumentam vida/ataque. Estruturas Arquivo/Quartel têm aprimoramento persistente e leitura narrativa, mas missões pessoais/arena/contratos ainda são futuros. Não há afixos aleatórios, desmontagem, loadouts, Veterano ou quatro sets visuais de armadura por herói.
 
@@ -42,6 +46,6 @@ O argumento QA usa saves separados e suprime áudio nos testes. Não distribua s
 
 Use o preset Android para exportação. `tools/package_android.py` remove apenas testes e assinaturas antigas, preserva metadados restantes, adiciona licenças, alinha a 16 KB, assina com chave privada externa e verifica o resultado com Android SDK Build Tools. Nunca inclua keystore ou senha no repositório. A chave deve ser preservada para permitir atualizações sobre o APK instalado.
 
-Os generators `tools/create_art.py` e `tools/create_content.py` permitem reproduzir os assets e o catálogo; não substituem revisão artística. A fonte DejaVu tem licença anexada. Não foram usados sprites ou músicas de Golden Axe.
+`tools/import_visual_atlases.gd` reproduz o corte dos masters visuais e `tools/create_content.py` reproduz o catálogo. O antigo gerador está arquivado em `art_sources/legacy/`. A fonte DejaVu tem licença anexada. Não foram usados sprites ou músicas de Golden Axe.
 
 Leia `docs/GDD_v1.md` para o projeto completo e `docs/QA_v0_1.md` para evidências e limitações desta build.

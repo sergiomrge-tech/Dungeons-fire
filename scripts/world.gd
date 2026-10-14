@@ -18,7 +18,7 @@ func _ready() -> void:
 
 func change_theme(index: int) -> void:
 	theme_index=index
-	background=load("res://assets/world_%d.png" % index)
+	background=load("res://assets/painted_worlds/world_%d.webp" % index)
 	queue_redraw()
 	if overlay!=null:overlay.queue_redraw()
 
@@ -52,17 +52,20 @@ func fx(pos: Vector2, radius: float, color: Color, seconds: float = .4) -> void:
 
 func _draw() -> void:
 	if background!=null: draw_texture_rect(background,Rect2(0,0,1280,720),false)
-	# Animated fire embers and localized torch halos.
-	for i in range(17):
-		var x = fmod(i*91.7+clock*(7+i%4),1280)
-		var y = 400-fmod(clock*18+i*29,230)
-		draw_circle(Vector2(x,y),1.5,Color(.98,.61,.28,.4))
-	if theme_index==5:
-		var level = int(game.progress.d.hub.forge)
-		for i in range(level*3):
-			draw_line(Vector2(260+i*12,370),Vector2(260+i*12,420),Color(.71,.53,.34,.7),3)
-		for i in range(int(game.progress.d.hub.archive)):
-			draw_rect(Rect2(890+i*15,355,10,45),Color(.49,.35,.26))
+	var colors = [Color("78e0ea"),Color("b7e5ff"),Color("ffffff"),Color("ffcc75"),Color("d9c4ff"),Color("ffe8ba")]
+	# Bounded ambient particles complement the painted environments.
+	for i in range(22):
+		var x = fmod(i*67.7+clock*(5+i%4)+sin(clock*.4+i)*15,1280)
+		var y = fmod(i*31.0+clock*(12 if theme_index==2 else -9)+720,570)
+		var color: Color = colors[theme_index]; color.a = .22 + .2 * sin(clock+i)
+		draw_circle(Vector2(x,y),1.7 if theme_index==2 else 1.2,color)
+	if theme_index == 1:
+		for i in range(8):
+			var p = Vector2(270+i*93, 272+sin(i*2.4)*43)
+			draw_arc(p, 6+fmod(clock*7+i*3,18), 0, TAU, 24, Color(.7,.94,1,.17),1)
+	if game.screen == "combat":
+		for i in range(12):
+			draw_rect(Rect2(0,600+i*10,1280,10),Color(.12,.18,.28,i*.011))
 func draw_effects() -> void:
 	for e in effects:
 		var alpha = e.time/e.duration
@@ -77,5 +80,6 @@ func draw_effects() -> void:
 		overlay.draw_line(visual_pos-Vector2(facing*20,0),visual_pos+Vector2(facing*12,0),p.color,4)
 		overlay.draw_circle(visual_pos,5,p.color)
 	for n in numbers:
-		var color = Color(1,.41,.32,n.time) if n.player else Color(1,.88,.58,n.time)
+		var color = Color(1,.41,.42,n.time) if n.player else Color(1,.96,.76,n.time)
+		overlay.draw_string_outline(font,n.pos,str(n.value),HORIZONTAL_ALIGNMENT_LEFT,-1,23,4,Color(.15,.19,.29,n.time))
 		overlay.draw_string(font,n.pos,str(n.value),HORIZONTAL_ALIGNMENT_LEFT,-1,23,color)
