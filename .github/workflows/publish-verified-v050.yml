@@ -1,0 +1,40 @@
+name: Publish verified Android v0.5.0
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-verified-v050.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-tested-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Retrieve exact tested APK and verify provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/38740494914 --jq '.head_sha + " " + .conclusion')" = 'b17576130a2ba0f9c9f3349f76ecd0690e325180 success'
+          mkdir -p /tmp/preview
+          gh run download 38740494914 --repo "$GITHUB_REPOSITORY" --name Dungeons-Fires-Android-v050-preview --dir /tmp/preview
+          cd /tmp/preview
+          sha256sum -c sha256.txt
+          echo 'fca94bac55cc9e832793fedaf14810257f4146e06620781c77ca8cd464b615c3  Dungeons_Fires_v0_5_0_Android.apk' | sha256sum -c -
+          unzip -t Dungeons_Fires_v0_5_0_Android.apk | tail -n 2
+      - name: Publish tested preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > /tmp/release-notes.txt <<'NOTES'
+          Varek com combo refinado, avanço e defesa frontal; Mina dos Sinos com cinco salas distintas, obstáculos, elite, baús e abrigo seguro; Garron com três padrões, recuperação e segunda fase; receita e efeito da Marca do Portão.
+
+          Preservados o acampamento, o mapa visível e o layout clássico aprovados. Testes de campanha/primeira região, interface e combate nativos aprovados. APK assinado, CRC e alinhamento de 16 KB verificados. Runtime Android API 29/x86_64 aprovado com três contatos sintéticos, zoom, HOME, encerramento/reabertura e preservação de vida, poções, saque e baú. Framebuffer revisado; logcat sem erros do jogo. Não medido em aparelho físico; 60 FPS no celular continua sendo meta.
+
+          Instala como com.sergiomrge.dungeonsfires.preview.v050 ao lado das prévias anteriores. O save das outras prévias não é importado automaticamente.
+          NOTES
+          cd /tmp/preview
+          gh release create v0.5.0-preview Dungeons_Fires_v0_5_0_Android.apk sha256.txt --repo "$GITHUB_REPOSITORY" --target b17576130a2ba0f9c9f3349f76ecd0690e325180 --title 'Dungeons Fires v0.5.0 — Mina e combate' --notes-file /tmp/release-notes.txt --prerelease --latest=false
