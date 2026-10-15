@@ -25,3 +25,7 @@ Importação e parser Godot 4.6.1 sem erros. As 139 verificações de campanha, 
 `tests/capture_visuals.gd` produz exclusivamente capturas reais do framebuffer Godot: menu, hub, heróis, mapa, cinco regiões, maga e arqueira. O workflow publica essas imagens para revisão; imagens de produção nunca são apresentadas como capturas do jogo.
 
 O APK em `builds/` continua sendo a v0.1.0. A v0.2 é uma atualização do projeto-fonte. Não houve medição de FPS, instalação ou teste de toque físico no aparelho Android.
+
+## Revisão sobre v0.3
+
+Capturas reais do Godot identificaram retratos que excediam o painel, barras com altura mínima incorreta e recortes de sprites com partes de linhas vizinhas. O importador agora usa limites por coluna, preserva a proporção com escala comum por personagem e alinha os pés. O HUD aplica o tamanho após configurar a expansão e atualiza o contador de poções. Barras de inimigos ficam restritas ao combate, sem aparecer nos NPCs da vila. A revisão preserva o diário, a recuperação do refúgio e os efeitos da v0.3.

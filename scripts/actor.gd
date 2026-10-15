@@ -206,7 +206,7 @@ func _draw() -> void:
 		draw_arc(Vector2(24,-62*size_scale),39*size_scale,-1.42,1.05,24,slash_color,3.5)
 		if is_player:draw_arc(Vector2(24,-62*size_scale),45*size_scale,-1.23,.93,24,Color(.98,.97,.76,.23),1.8)
 	draw_set_transform(Vector2.ZERO)
-	if not is_player and hp>0:
+	if not is_player and hp>0 and game.screen=="combat":
 		var w = 85 if boss else 54
 		draw_rect(Rect2(-w/2.0-1,-96*size_scale-1,w+2,7),Color("304660"))
 		draw_rect(Rect2(-w/2.0,-96*size_scale,w,5),Color("e8eaf0"))

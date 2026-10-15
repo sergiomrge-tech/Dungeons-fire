@@ -22,6 +22,11 @@ func run() -> void:
 	scene.player.timer=.05
 	assert(scene.player.visual_frame()==6,"Follow-through artwork")
 	scene.update_hud();assert(scene.health_bar.value==scene.player.hp,"HP display follows state")
+	scene.potions=1;scene.update_hud()
+	assert(scene.expedition_status.text.contains("Poções 1"),"Potion label follows live state")
+	for control in scene.ui.get_children():
+		if control is TextureRect:assert(control.size.x<=82 and control.size.y<=92,"Combat portrait fits its panel")
+	assert(scene.health_bar.size.y<=14 and scene.mana_bar.size.y<=9,"Compact meters do not inherit text height")
 	scene.show_hub();assert(scene.health_bar==null,"Combat HUD cleared in hub")
 	assert(not scene.controls.active,"No combat controls over hub")
 	scene.queue_free();await process_frame

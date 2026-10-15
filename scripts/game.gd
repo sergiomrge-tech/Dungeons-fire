@@ -14,6 +14,7 @@ var enemies: Array = []
 var actors: Node2D
 var ui: Control
 var controls: DFTouch
+var expedition_status: Label
 var hud: Label
 var health_bar: ProgressBar
 var mana_bar: ProgressBar
@@ -90,12 +91,12 @@ func make_theme() -> Theme:
 	return t
 
 func portrait(kind: String, pos: Vector2, dimensions: Vector2) -> TextureRect:
-	var view=TextureRect.new();view.texture=load("res://assets/portraits/%s.png"%kind)
+	var view=TextureRect.new();view.expand_mode=TextureRect.EXPAND_IGNORE_SIZE;view.texture=load("res://assets/portraits/%s.png"%kind)
 	view.position=pos;view.size=dimensions;view.expand_mode=TextureRect.EXPAND_IGNORE_SIZE;view.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	view.mouse_filter=Control.MOUSE_FILTER_IGNORE;view.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR;ui.add_child(view);return view
 
 func meter(pos: Vector2, dimensions: Vector2, color: Color) -> ProgressBar:
-	var bar=ProgressBar.new();bar.position=pos;bar.size=dimensions;bar.show_percentage=false;bar.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	var bar=ProgressBar.new();bar.show_percentage=false;bar.position=pos;bar.size=dimensions;bar.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	var bg=StyleBoxFlat.new();bg.bg_color=Color("d6deea");bg.set_corner_radius_all(4);bg.border_color=Color("8ea2bb");bg.set_border_width_all(1)
 	var fill=StyleBoxFlat.new();fill.bg_color=color;fill.set_corner_radius_all(4)
 	bar.add_theme_stylebox_override("background",bg);bar.add_theme_stylebox_override("fill",fill);ui.add_child(bar);return bar
@@ -113,7 +114,7 @@ func clear_ui() -> void:
 	for child in ui.get_children():child.queue_free();ui.remove_child(child)
 	controls.active=false;controls.clear();attack_held=false;keyboard_attack=false;move_axis=Vector2.ZERO
 	toast_label.text="";toast_timer=0
-	hud=null;boss_hud=null;health_bar=null;mana_bar=null
+	hud=null;expedition_status=null;boss_hud=null;health_bar=null;mana_bar=null
 	camera.zoom=Vector2.ONE;camera.position=Vector2(640,360)
 
 func clear_actors() -> void:
@@ -306,7 +307,7 @@ func combat_ui() -> void:
 	mana_bar=meter(Vector2(114,94),Vector2(263,9),Color("6b9bce"));mana_bar.max_value=100
 	panel(Vector2(420,20),Vector2(388,65))
 	label(db.dungeons[dungeon].name,Vector2(438,29),Vector2(360,28),18)
-	label("Sala %d / 5  •  Poções %d"%[room+1,potions],Vector2(438,56),Vector2(360,24),14,Color("617a96"))
+	expedition_status=label("Sala %d / 5  •  Poções %d"%[room+1,potions],Vector2(438,56),Vector2(360,24),14,Color("617a96"))
 	button("MOCHILA",Vector2(838,24),Vector2(170,57),func():save_run();previous_screen="combat";show_inventory())
 	button("PAUSA",Vector2(1023,24),Vector2(200,57),show_pause)
 	boss_hud=label("",Vector2(630,135),Vector2(600,62),21,Color("483a53"))
@@ -318,6 +319,7 @@ func combat_ui() -> void:
 func update_hud() -> void:
 	if player==null or hud==null:return
 	hud.text="%s • Nv. %d\nVida %d / %d"%[progress.d.hero.capitalize(),progress.hero_stats().level,player.hp,player.max_hp]
+	if expedition_status!=null:expedition_status.text="Sala %d / 5  •  Poções %d"%[room+1,potions]
 	if health_bar!=null:health_bar.value=player.hp
 	if mana_bar!=null:mana_bar.value=player.mana if player.kind=="maela" else player.supreme
 	controls.cooldowns={"dodge":player.dodge_cd,"skill0":player.skill_cd[0],"skill1":player.skill_cd[1],"charge":player.supreme}
