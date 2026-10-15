@@ -10,6 +10,9 @@ var effects: Array = []
 var projectiles: Array = []
 var font: Font
 var overlay: Node2D
+var props: Array = []
+var gate
+var chest_nodes: Dictionary = {}
 
 func _ready() -> void:
 	font=load("res://assets/DejaVuSans.ttf")
@@ -17,10 +20,38 @@ func _ready() -> void:
 	overlay.draw.connect(draw_effects)
 
 func change_theme(index: int) -> void:
+	clear_props()
 	theme_index=index
 	background=load("res://assets/painted_worlds/hub_camp.webp") if index == 5 else load("res://assets/painted_worlds/world_%d.webp" % index)
 	queue_redraw()
 	if overlay!=null:overlay.queue_redraw()
+
+func clear_props() -> void:
+	for prop in props:
+		if is_instance_valid(prop):prop.queue_free()
+	props.clear();chest_nodes.clear();gate=null
+
+func make_prop(cell: int, pos: Vector2, size: Vector2 = Vector2(88,88)):
+	var node=DFRoomProp.new();node.cell=cell;node.position=pos;node.display_size=size
+	game.actors.add_child(node);props.append(node);return node
+
+func configure_room() -> void:
+	clear_props()
+	var def: Dictionary=game.room_layout.definition
+	var path: String=def.get("background","")
+	background=load("res://assets/painted_worlds/%s"%path) if path!="" else load("res://assets/painted_worlds/world_%d.webp"%theme_index)
+	for prop in def.get("props",[]):make_prop(int(prop.cell),Vector2(prop.x,prop.y))
+	for chest in def.get("chests",[]):chest_nodes[chest.id]=make_prop(0,Vector2(chest.x,chest.y))
+	if game.dungeon==0 and game.room<4:gate=make_prop(4,Vector2(1170,476),Vector2(100,110))
+	refresh_chests();refresh_gate();queue_redraw()
+
+func refresh_chests() -> void:
+	for id in chest_nodes:
+		if is_instance_valid(chest_nodes[id]):
+			chest_nodes[id].cell=1 if game.room_events.has(id) else 0;chest_nodes[id].queue_redraw()
+
+func refresh_gate() -> void:
+	if is_instance_valid(gate):gate.cell=5 if game.cleared_room else 4;gate.queue_redraw()
 
 func tick(delta: float) -> void:
 	clock+=delta
@@ -29,7 +60,9 @@ func tick(delta: float) -> void:
 	for e in effects:e.time-=delta
 	effects=effects.filter(func(e):return e.time>0)
 	for p in projectiles:
+		var old: Vector2=p.pos
 		p.time-=delta; p.pos+=p.velocity*delta
+		if game.room_layout.segment_blocked(old,p.pos):p.time=0;continue
 		if p.player:
 			for target in game.enemies:
 				if target.hp>0 and absf(target.position.y-p.pos.y)<24 and absf(target.position.x-p.pos.x)<30 and not p.hit.has(target.id):
@@ -39,7 +72,7 @@ func tick(delta: float) -> void:
 					if not p.piercing:p.time=0;break
 		else:
 			if game.player!=null and game.player.hp>0 and game.player.position.distance_to(p.pos)<30:
-				game.player.hurt(p.damage);p.time=0
+				game.player.hurt(p.damage,Vector2.ZERO,p.pos-p.velocity*.1);p.time=0
 	projectiles=projectiles.filter(func(p):return p.time>0 and p.pos.x>-100 and p.pos.x<1380)
 	queue_redraw()
 	overlay.queue_redraw()
@@ -115,6 +148,10 @@ func draw_hub_recovery() -> void:
 			draw_circle(pos+Vector2(flutter,-9),2.7,Color("efb2cb") if i%2==0 else Color("ffe19b"))
 
 func draw_effects() -> void:
+	if game.screen=="combat":
+		for enemy in game.enemies:
+			if enemy.hp>0 and enemy.state in ["windup","attack"] and not enemy.boss_profile.is_empty():
+				DFBossPatterns.draw_zone(overlay,enemy.boss_profile,.65+sin(clock*12)*.15,enemy.state=="attack")
 	for e in effects:
 		var alpha = e.time/e.duration
 		var color: Color = e.color; color.a*=alpha

@@ -5,3 +5,6 @@ Cenários e sprites originais gerados com a ferramenta ImageGen e integrados ao 
 Os três masters estão em `art_sources/`, excluídos da importação/exportação Godot. `tools/import_visual_atlases.gd` reproduz o corte técnico dos 6 cenários e 14 conjuntos animados; cada personagem tem 8 poses autoradas. Respiração, esquiva e morte combinam essas poses com transformações em tempo real. As animações ainda podem exigir refinamento manual.
 
 O ambiente é uma pintura 2D; não representa cenário 3D navegável. Os efeitos e os controles são desenhados em tempo real no Godot. A fonte DejaVu segue a licença anexada. Os efeitos sonoros e a música v0.1 permanecem gerados por código.
+
+
+v0.5.0 (15/10/2026): quatro ambientes originais da Mina dos Sinos e atlas transparente de oito objetos, gerados no ImageGen e integrados às salas jogáveis. Masters em `art_sources/mine_v050/`; importação técnica reproduzível em `tools/import_mine_assets.gd`. Os novos sons de lâmina pesada, escudo, impacto do chefe e baú foram sintetizados por código.

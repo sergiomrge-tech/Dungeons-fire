@@ -34,6 +34,18 @@ func run() -> void:
 	for region in range(5):
 		game.start_dungeon(region*3)
 		await capture("05_combat_region_%d"%region)
+	game.start_dungeon(0)
+	for room in range(5):
+		game.room=room;game.spawn_room();game.combat_ui()
+		if room==2:game.player.position=Vector2(970,510);game.interact_button.visible=true
+		await capture("13_mine_room_%d"%room)
+	game.start_dungeon(2);game.room=4;game.spawn_room();game.combat_ui()
+	var boss=game.enemies[0];game.player.position=Vector2(710,480);boss.cooldown=0;boss.tick(.017);game.world.tick(.017)
+	await capture("14_garron_warning")
+	boss.hp=boss.max_hp*.5;boss.tick(.017);boss.state="idle";boss.cooldown=0;boss.tick(.017);game.world.tick(.017);game.update_hud()
+	await capture("15_garron_phase_II")
+	game.progress.d.inventory.append("R_0");game.progress.d.equipped.relic="R_0";game.guard_charge=5;game.player.state="guard";game.player.queue_redraw()
+	await capture("16_varek_guard_relic")
 	game.progress.d.run={};game.progress.d.cleared=[0,1,2]
 	game.progress.switch_hero("maela");game.start_dungeon(3)
 	game.player.request_skill(0);await capture("06_mage")

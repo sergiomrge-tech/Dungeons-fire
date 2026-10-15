@@ -2,19 +2,17 @@ name: Build Android preview APK
 on:
   push:
     branches:
-      - build/android-preview-v0.3
-    paths:
-      - '.github/workflows/android-preview.yml'
+      - first-region-v05
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: dungeons-android-preview-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   export-android-preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Install Java 17
@@ -66,8 +64,8 @@ jobs:
           f=Path('export_presets.cfg')
           s=f.read_text()
           assert 'package/unique_name="com.sergiomrge.dungeonsfires"' in s
-          s=s.replace('package/unique_name="com.sergiomrge.dungeonsfires"','package/unique_name="com.sergiomrge.dungeonsfires.preview"')
-          s=s.replace('package/name="Dungeons Fires"','package/name="Dungeons Fires Preview"')
+          s=s.replace('package/unique_name="com.sergiomrge.dungeonsfires"','package/unique_name="com.sergiomrge.dungeonsfires.preview.v050"')
+          s=s.replace('package/name="Dungeons Fires"','package/name="Dungeons Fires Preview 0.5"')
           s=s.replace('package/signed=false','package/signed=true')
           f.write_text(s)
           PY
@@ -76,6 +74,14 @@ jobs:
           set -o pipefail
           Godot_v4.6.1-stable_linux.x86_64 --headless --editor --import --quit 2>&1 | tee /tmp/preview-import.log
           if grep -E 'SCRIPT ERROR|ERROR:' /tmp/preview-import.log; then exit 1; fi
+      - name: Native regression gates before Android export
+        run: |
+          set -euo pipefail
+          python3 tests/audit_project.py
+          for suite in test_game test_first_region_v05 test_combat_bot test_living_hub_v03 test_classic_ui test_visual_assets; do
+            Godot_v4.6.1-stable_linux.x86_64 --headless --script tests/$suite.gd -- --qa 2>&1 | tee /tmp/native-$suite.txt
+            if grep -E 'SCRIPT ERROR|ERROR:' /tmp/native-$suite.txt; then exit 1; fi
+          done
       - name: Export signed debug preview
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ github.workspace }}/preview-debug.keystore
@@ -85,21 +91,77 @@ jobs:
           set -euo pipefail
           cp "$HOME/.android/dungeons_preview.keystore" "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
           mkdir -p /tmp/preview
-          Godot_v4.6.1-stable_linux.x86_64 --headless --export-debug Android /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
-          test -s /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
+          Godot_v4.6.1-stable_linux.x86_64 --headless --export-debug Android /tmp/preview/Dungeons_Fires_v0_5_0_Android.apk
+          test -s /tmp/preview/Dungeons_Fires_v0_5_0_Android.apk
       - name: Verify APK integrity and signature
         run: |
           set -euo pipefail
-          APK=/tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
+          APK=/tmp/preview/Dungeons_Fires_v0_5_0_Android.apk
           unzip -t "$APK" | tail -n 2
           "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$APK" | head -n 3
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -c -P 16 -v 4 "$APK" > /tmp/preview-alignment.txt
+          tail -n 1 /tmp/preview-alignment.txt
+          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$APK" > /tmp/preview-badging.txt
+          sed -n '1,3p' /tmp/preview-badging.txt
+          grep -F "com.sergiomrge.dungeonsfires.preview.v050" /tmp/preview-badging.txt
+          grep -F "versionName='0.5.0'" /tmp/preview-badging.txt
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          apk=Path('/tmp/preview/Dungeons_Fires_v0_5_0_Android.apk')
+          with zipfile.ZipFile(apk) as z:
+              names=z.namelist()
+              assert z.testzip() is None
+              assert 'assets/scripts/classic_ui.gdc' in names, 'Classic UI must be exported'
+              assert 'assets/scripts/boss_patterns.gdc' in names
+              assert 'assets/data/mine_rooms.json' in names
+              assert not any('android_driver' in n for n in names)
+              assert any('hub_camp.webp-' in n for n in names), 'Forest camp background must be exported'
+              assert not any(n.startswith(('assets/tests/','assets/art_sources/','assets/tools/','assets/builds/')) for n in names), 'Exclude internal sources from APK'
+              assert not any(n.endswith(('.keystore','.jks')) for n in names), 'No signing key in APK'
+          print('APK_CONTENT: classic UI and forest camp verified; internal tooling excluded')
+          PY
           sha256sum "$APK" | tee /tmp/preview/sha256.txt
           echo "Preview uses an isolated ephemeral debug certificate and distinct Android application ID. It can coexist with the signed v0.1.0. Keys are never committed." > /tmp/preview/README.txt
+      - name: Export isolated x86_64 Android runtime test
+        run: |
+          set -euo pipefail
+          cp tests/android_driver.gd scripts/android_driver.gd
+          python3 - <<'PYQA'
+          from pathlib import Path
+          p=Path('scripts/game.gd');s=p.read_text();s=s.replace('\tshow_menu()\n','\tshow_menu()\n\tadd_child(load("res://scripts/android_driver.gd").new())\n',1);p.write_text(s)
+          p=Path('export_presets.cfg');s=p.read_text().replace('preview.v050','qa.v050').replace('architectures/arm64-v8a=true','architectures/arm64-v8a=false').replace('architectures/x86_64=false','architectures/x86_64=true');p.write_text(s)
+          PYQA
+          Godot_v4.6.1-stable_linux.x86_64 --headless --editor --import --quit
+          Godot_v4.6.1-stable_linux.x86_64 --headless --export-debug Android /tmp/android-qa.apk
+      - name: Enable KVM for actual Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android API 29 runtime, multitouch and lifecycle
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          target: default
+          arch: x86_64
+          ram-size: 2048M
+          disk-size: 4096M
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: python3 tests/run_android_qa.py
+      - name: Retain Android runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dungeons-Fires-Android-runtime-v050
+          path: /tmp/android-runtime/*
+          if-no-files-found: warn
       - name: Upload Android APK preview
         uses: actions/upload-artifact@v4
         with:
-          name: Dungeons-Fires-Android-v030-preview
+          name: Dungeons-Fires-Android-v050-preview
           path: /tmp/preview/*
           if-no-files-found: error
           retention-days: 14
+

@@ -8,7 +8,11 @@ func run() -> void:
 	game.set_physics_process(false)
 	game.progress=DFProgress.new(DFContent.new(),"user://combat_bot_save.json")
 	game.progress.d.settings.sound=false
-	game.start_dungeon(0)
+	var index=2 if "--garron" in OS.get_cmdline_user_args() else 0
+	if index==2:
+		game.progress.complete(0,{});game.progress.complete(1,{})
+		game.progress.d.heroes.varek.level=5;game.progress.equip("W_sword_1")
+	game.start_dungeon(index)
 	var ticks=0;var dodges=0;var skills=0
 	while game.screen=="combat" and ticks<18000:
 		ticks+=1
@@ -21,7 +25,7 @@ func run() -> void:
 				nearest=a;distance=a.position.distance_to(game.player.position)
 		if nearest!=null:
 			var diff=nearest.position-game.player.position
-			game.controls.axis=Vector2(signf(diff.x) if absf(diff.x)>63 else 0,signf(diff.y) if absf(diff.y)>18 else 0)
+			game.controls.axis=game.room_layout.direction(game.player.position,nearest.position) if game.room_layout.segment_blocked(game.player.position,nearest.position,14) else Vector2(signf(diff.x) if absf(diff.x)>63 else 0,signf(diff.y) if absf(diff.y)>18 else 0)
 			game.player.facing=1 if diff.x>=0 else -1
 			game.attack_held=absf(diff.x)<117 and absf(diff.y)<52
 			if nearest.state=="windup" and nearest.timer<.25 and game.player.dodge_cd<=0:

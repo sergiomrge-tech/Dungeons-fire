@@ -50,6 +50,10 @@ var current_map_region: int = 0
 var selected_map_dungeon: int = 0
 var guard_charge: float = 0
 var resource_cd: float = 0
+var room_layout = DFDungeonLayout.new()
+var room_events: Array = []
+var interact_button: Button
+var hit_stop: float = 0
 
 func _ready() -> void:
 	get_tree().quit_on_go_back=false
@@ -68,7 +72,7 @@ func _ready() -> void:
 	ui=Control.new();ui.theme=game_theme;ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);ui.mouse_filter=Control.MOUSE_FILTER_IGNORE;canvas_layer.add_child(ui)
 	controls=Touch.new();controls.action.connect(on_action);canvas_layer.add_child(controls)
 	toast_label=Label.new();toast_label.theme=game_theme;toast_label.position=Vector2(330,116);toast_label.size=Vector2(620,50);toast_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;toast_label.add_theme_color_override("font_color",Color("ffdfa1"));toast_label.add_theme_color_override("font_outline_color",Color("263a55"));toast_label.add_theme_constant_override("outline_size",6);toast_label.mouse_filter=Control.MOUSE_FILTER_IGNORE;canvas_layer.add_child(toast_label)
-	for sound in ["swing","impact","magic","coin","step"]: sounds[sound]=load("res://assets/%s.wav"%sound)
+	for sound in ["swing","impact","magic","coin","step","blade_heavy","shield","boss_slam","chest"]: sounds[sound]=load("res://assets/%s.wav"%sound)
 	for i in range(6):
 		var audio=AudioStreamPlayer.new();audio.volume_db=-12;add_child(audio);sfx_players.append(audio)
 	music=AudioStreamPlayer.new();music.stream=load("res://assets/hearth.wav");music.volume_db=-12;add_child(music);music.finished.connect(func():if progress.d.settings.sound:music.play())
@@ -120,6 +124,7 @@ func clear_ui() -> void:
 	for child in ui.get_children():child.queue_free();ui.remove_child(child)
 	controls.active=false;controls.clear();attack_held=false;keyboard_attack=false;move_axis=Vector2.ZERO
 	toast_label.text="";toast_timer=0
+	interact_button=null
 	hud=null;expedition_status=null;boss_hud=null;health_bar=null;mana_bar=null
 	camera.zoom=Vector2.ONE;camera.position=Vector2(640,360)
 
@@ -146,7 +151,7 @@ func show_menu() -> void:
 	button("RETOMAR EXPEDIÇÃO",Vector2(84,410),Vector2(458,55),resume_run,progress.d.run.is_empty())
 	button("HISTÓRIA",Vector2(84,482),Vector2(220,53),func():show_lore(false))
 	button("OPÇÕES",Vector2(320,482),Vector2(222,53),func():previous_screen="menu";show_settings())
-	label("v0.4.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("c5b795"))
+	label("v0.5.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("c5b795"))
 	var hero=spawn_actor(progress.d.hero,Vector2(870,550),true,180,28);hero.size_scale=2.7
 	label("Seu próximo capítulo começa aqui.",Vector2(710,590),Vector2(500,35),21,Color("ffffff"))
 
@@ -229,14 +234,17 @@ func start_dungeon(index: int, resume: bool = false) -> void:
 	world.change_theme(int(db.dungeons[index].region))
 	var stats=progress.hero_stats();spawn_actor(progress.d.hero,Vector2(265,505),true,stats.hp,stats.attack);player.defense=stats.defense
 	potions=3 if progress.d.hub.botica>=3 else 2
-	loot={"gold":0,"ore":0,"cloth":0,"xp":0,"items":[]}
+	loot={"gold":0,"ore":0,"cloth":0,"xp":0,"items":[]};room_events=[];guard_charge=0;hit_stop=0
 	if resume:
 		var run=progress.d.run.duplicate(true)
 		room=int(run.room);potions=int(run.potions);loot=run.loot;cleared_room=run.cleared
+		room_events=run.get("events",[]).duplicate();room_layout.configure(dungeon,room);world.configure_room()
 		player.hp=float(run.hp);player.position=Vector2(run.x,run.y);player.supreme=float(run.get("supreme",0));player.mana=float(run.get("mana",100))
 		for data in run.enemies:
 			var a=spawn_actor(data.kind,Vector2(data.x,data.y),false,data.max_hp,data.attack,data.boss)
 			a.hp=data.hp;a.id=int(data.id);a.facing=int(data.facing)
+			a.boss_phase=int(data.get("boss_phase",1));a.boss_step=int(data.get("boss_step",0));a.elite=bool(data.get("elite",false))
+			a.cooldown=1.0
 			next_enemy_id=maxi(next_enemy_id,a.id+1)
 	else:spawn_room()
 	combat_ui();save_run()
@@ -257,10 +265,18 @@ func spawn_room() -> void:
 	player.position=Vector2(205,505)
 	var region=int(db.dungeons[dungeon].region)
 	var count=3+room%2
-	if room==4:
+	room_layout.configure(dungeon,room);world.configure_room()
+	if dungeon==0 and room<4:
+		for entry in room_layout.definition.get("enemies",[]):
+			var actor=spawn_actor(entry[0],Vector2(entry[1],entry[2]),false,(43+(15 if entry[0]=="brute" else 0))*entry[3],9)
+			actor.elite=float(entry[3])>1.0
+		if room_layout.definition.get("rest",false) and not room_events.has("MINE_REST_03"):
+			player.hp=minf(player.max_hp,player.hp+player.max_hp*.25);room_events.append("MINE_REST_03")
+			toast("Abrigo seguro • 25% de vida recuperada. Abra o baú antes de seguir.",5)
+	elif room==4:
 		var kind="brute"
 		if db.dungeons[dungeon].guardian:kind=["garron","sereia","rei","colosso","severan"][region]
-		var life=230+dungeon*47
+		var life=320 if dungeon==0 else 230+dungeon*47
 		spawn_actor(kind,Vector2(900,480),false,life,20+region*4,true)
 		if region>0:spawn_actor("knight",Vector2(1040,531),false,50+region*15,10+region*3)
 	else:
@@ -285,14 +301,15 @@ func combat_ui() -> void:
 	health_bar=meter(Vector2(114,70),Vector2(263,14),Color("69ae83"));health_bar.max_value=player.max_hp
 	mana_bar=meter(Vector2(114,94),Vector2(263,9),Color("6b9bce"));mana_bar.max_value=100
 	panel(Vector2(420,20),Vector2(388,65))
-	label(db.dungeons[dungeon].name,Vector2(438,29),Vector2(360,28),18)
+	label(room_layout.definition.get("name",db.dungeons[dungeon].name),Vector2(438,29),Vector2(360,28),17)
 	expedition_status=label("Sala %d / 5  •  Poções %d"%[room+1,potions],Vector2(438,56),Vector2(360,24),14,Color("c5b795"))
 	button("MOCHILA",Vector2(838,24),Vector2(170,57),func():save_run();previous_screen="combat";show_inventory())
 	button("PAUSA",Vector2(1023,24),Vector2(200,57),show_pause)
 	boss_hud=label("",Vector2(630,135),Vector2(600,62),21,Color("f0dab0"))
 	if cleared_room:
-		button("PRÓXIMA SALA  →",Vector2(469,284),Vector2(350,62),next_room)
-		button("DEPOSITAR E RETIRAR",Vector2(469,357),Vector2(350,54),retreat)
+		button("PRÓXIMA SALA  →",Vector2(980,246),Vector2(255,52),next_room)
+		button("DEPOSITAR SAQUE",Vector2(980,306),Vector2(255,46),retreat)
+	interact_button=button("ABRIR BAÚ • F",Vector2(477,568),Vector2(300,52),interact_chest);interact_button.visible=false
 	update_hud()
 
 func update_hud() -> void:
@@ -307,7 +324,31 @@ func update_hud() -> void:
 		boss_hud.text=""
 		for enemy in enemies:
 			if enemy.boss and enemy.hp>0:
-				boss_hud.text="%s\nVida %d/%d • %s" %[db.dungeons[dungeon].boss,enemy.hp,enemy.max_hp,"Fase II" if enemy.hp<enemy.max_hp*.5 else "Fase I"]
+				boss_hud.text="%s\nVida %d/%d • %s" %[db.dungeons[dungeon].boss,enemy.hp,enemy.max_hp,("POSTURA ABERTA" if enemy.state in ["recover","hurt"] else ("Fase II" if enemy.boss_phase==2 else "Fase I"))]
+
+func move_actor(from: Vector2, motion: Vector2) -> Vector2:
+	# Substeps prevent dodge/dash tunnelling through solid props.
+	var count=maxi(1,int(ceil(motion.length()/10.0)))
+	var pos=from
+	for i in range(count):pos=room_layout.move(pos,motion/count)
+	return pos
+
+func nearby_chest() -> Dictionary:
+	if player==null:return {}
+	for chest in room_layout.definition.get("chests",[]):
+		if not room_events.has(chest.id) and player.position.distance_to(Vector2(chest.x,chest.y))<115:return chest
+	return {}
+
+func interact_chest() -> void:
+	if screen!="combat":return
+	var chest=nearby_chest()
+	if chest.is_empty():return
+	var old_loot=loot.duplicate(true);var old_events=room_events.duplicate()
+	for key in ["gold","ore","cloth"]:loot[key]+=int(chest.get(key,0))
+	room_events.append(chest.id)
+	if not save_run():loot=old_loot;room_events=old_events;return
+	world.refresh_chests();play_sfx("chest")
+	toast("Baú: +%d ouro • +%d minério • saque guardado na expedição"%[chest.gold,chest.ore],3)
 
 func next_room() -> void:
 	if not cleared_room:return
@@ -328,10 +369,12 @@ func player_strike(a: DFActor, action_name: String) -> void:
 	var range_x=145.0 if family=="hammer" else 116.0
 	var depth=56.0
 	var color=Color("ffd179")
+	var charged=relic_effect()=="guard" and guard_charge>0
+	var landed=false
 	var omnidirectional=false
 	if action_name=="skill0":
 		damage*=2.1;range_x=240;depth=80
-		if a.kind=="varek":a.position.x=clampf(a.position.x+a.facing*80,70,1210)
+		if a.kind=="varek":range_x=170
 	elif action_name=="skill1":
 		damage*=1.5;range_x=210;depth=100;omnidirectional=true;ranged=false
 		a.invuln=maxf(a.invuln,.55)
@@ -357,16 +400,27 @@ func player_strike(a: DFActor, action_name: String) -> void:
 		if e.hp<=0:continue
 		var diff: Vector2=e.position-a.position
 		var in_front=diff.x*a.facing>=-24 or omnidirectional
-		if in_front and absf(diff.x)<range_x and absf(diff.y)<depth:
+		if in_front and absf(diff.x)<range_x and absf(diff.y)<depth and not room_layout.segment_blocked(a.position,e.position):
 			var boost=1.0
-			if relic_effect()=="guard" and guard_charge>0:boost=1.25;guard_charge=0
+			if charged:boost=1.25;e.stagger_multiplier=2.5
 			if relic_effect()=="rupture" and action_name!="basic":boost=1.20
-			if e.hurt(damage*boost,Vector2(a.facing*(18 if not e.boss else 4),0)):
+			if e.hurt(damage*boost,Vector2(a.facing*(18 if not e.boss else 4),0),a.position):
+				landed=true
 				a.supreme=minf(100,a.supreme+8)
 				if action_name=="skill1" or relic_effect()=="slow":e.slowed=2.5
 
+	if landed:
+		hit_stop=.065 if a.combo==2 else .035
+		if charged:
+			guard_charge=0;world.fx(a.position-Vector2(0,40),95,Color("fff1a6"),.45);play_sfx("shield")
+
 func enemy_strike(a: DFActor) -> void:
 	if player.hp<=0:return
+	if not a.boss_profile.is_empty():
+		world.fx(a.position,90,Color("ff9955"),.35);play_sfx("boss_slam")
+		if a.boss_profile.move!="rush" and DFBossPatterns.contains(a.boss_profile,player.position) and not room_layout.segment_blocked(a.boss_profile.origin,player.position):
+			player.hurt(a.attack_power*a.boss_profile.damage,Vector2(a.facing*18,0),a.boss_profile.origin)
+		return
 	if a.kind in ["archer","sereia","severan"]:
 		var vel=(a.aim-a.position).normalized()*320
 		world.missile(a.position,vel,a.attack_power,false,Color("ee7068"))
@@ -379,10 +433,10 @@ func enemy_strike(a: DFActor) -> void:
 		world.fx(a.position+Vector2(a.facing*40,-12),reach*.5,Color(1,.35,.24),.28)
 		var diff: Vector2=player.position-a.position
 		if absf(diff.x)<reach and absf(diff.y)<depth and diff.x*a.facing>-20:
-			player.hurt(a.attack_power*(1.25 if a.boss and a.hp<a.max_hp*.5 else 1.0),Vector2(a.facing*13,0))
+			player.hurt(a.attack_power*(1.25 if a.boss and a.hp<a.max_hp*.5 else 1.0),Vector2(a.facing*13,0),a.position)
 		if a.boss and a.hp<a.max_hp*.5:
 			world.fx(a.position,110,Color("ed7851"),.5)
-			if player.position.distance_to(a.position)<110:player.hurt(a.attack_power*.65)
+			if player.position.distance_to(a.position)<110:player.hurt(a.attack_power*.65,Vector2.ZERO,a.position)
 
 func damage_text(pos: Vector2, value: int, human: bool) -> void:
 	world.numbers.append({"pos":pos,"value":value,"time":1.0,"player":human})
@@ -415,7 +469,8 @@ func finish_dungeon() -> void:
 	label(db.dungeons[dungeon].name,Vector2(218,235),Vector2(850,55),25)
 	label("+%d ouro    +%d minério\nHerói nível %d • %d equipamentos obtidos"%[result.gold,result.ore,result.level,result.items.size()],Vector2(218,307),Vector2(850,80),25)
 	var message="Nova rota disponível no mapa." if result.first else "Materiais recebidos para novas melhorias."
-	if db.dungeons[dungeon].guardian:message="Brasa recuperada! Material de relíquia e aprimoramentos liberados."
+	if db.dungeons[dungeon].guardian:message="Brasa recuperada! Núcleo e receita de relíquia liberados na Forja."
+	if dungeon==2:message="Núcleo de Garron + receita Marca do Portão! Forja nível 2: defesa carrega um golpe que rompe postura."
 	if dungeon==14:message="O Incêndio Branco terminou. Os nomes voltam a ser lembrados. Edrava pode mudar."
 	var m=label(message,Vector2(218,406),Vector2(850,70),22);m.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	button("VOLTAR AO REFÚGIO",Vector2(218,517),Vector2(450,56),show_hub)
@@ -457,13 +512,15 @@ func on_action(name: String, held: bool) -> void:
 			"supreme":player.request_supreme()
 			"potion":use_potion()
 
-func save_run() -> void:
-	if player==null or player.hp<=0 or hero_dead:return
+func save_run() -> bool:
+	if player==null or player.hp<=0 or hero_dead:return false
+	var old_run=progress.d.run.duplicate(true)
 	var enemy_data:Array=[]
 	for a in enemies:
 		if a.hp>0:enemy_data.append(a.snapshot())
-	progress.d.run={"dungeon":dungeon,"room":room,"hp":player.hp,"x":player.position.x,"y":player.position.y,"potions":potions,"loot":loot.duplicate(true),"enemies":enemy_data,"cleared":cleared_room,"supreme":player.supreme,"mana":player.mana}
-	if not progress.save():toast("Não foi possível salvar a expedição.")
+	progress.d.run={"dungeon":dungeon,"room":room,"hp":player.hp,"x":player.position.x,"y":player.position.y,"potions":potions,"loot":loot.duplicate(true),"enemies":enemy_data,"cleared":cleared_room,"supreme":player.supreme,"mana":player.mana,"events":room_events.duplicate()}
+	if not progress.save():progress.d.run=old_run;toast("Não foi possível salvar a expedição.");return false
+	return true
 
 func show_pause() -> void:
 	save_run();clear_ui();screen="pause"
@@ -490,17 +547,19 @@ func item_scroll(ids: Array, crafting: bool) -> void:
 		if def.is_empty():continue
 		if def.hero!="all" and def.hero!=progress.d.hero:continue
 		var row=HBoxContainer.new();row.custom_minimum_size=Vector2(1100,65);list.add_child(row)
-		var text=Label.new();text.custom_minimum_size=Vector2(690,65);text.size_flags_horizontal=Control.SIZE_EXPAND_FILL;text.add_theme_font_size_override("font_size",18)
+		var text=Label.new();text.custom_minimum_size=Vector2(690,78);text.size_flags_horizontal=Control.SIZE_EXPAND_FILL;text.add_theme_font_size_override("font_size",18)
 		var n=int(progress.d.upgrades.get(id,0))
 		var equipped=progress.d.equipped[def.slot]==id
 		var current=db.item(str(progress.d.equipped.get(def.slot,"")))
 		var diff=float(def.attack)-float(current.get("attack",0))
 		text.text="%s +%d  %s\n%s • Atq %d / Def %d • Comparação atq %+d" %[def.name,n,"[EQUIPADO]" if equipped else "",["Comum","Raro","Épico","Lendário"][int(def.rarity)],def.attack,def.defense,diff]
+		if def.id=="R_0":text.text+="\nDefesa frontal: próximo golpe +25% dano e 2,5x quebra de postura."
+		elif def.slot=="relic" and def.get("core","")!="":text.text+="\nReceita: "+("liberada" if progress.recipe_unlocked(str(id)) else "vença o guardião regional")
 		text.add_theme_color_override("font_color",[Color("e4d5b2"),Color("8dc8ef"),Color("d0a0ed"),Color("f4c278")][int(def.rarity)]);row.add_child(text)
 		var b=Button.new();b.custom_minimum_size=Vector2(205,60);row.add_child(b)
 		if crafting:
-			b.text="%d ouro / %d minério\nFABRICAR"%[def.cost,def.ore];b.add_theme_font_size_override("font_size",15)
-			b.disabled=progress.d.inventory.has(id)
+			b.text="%d ouro / %d minério\n%s"%[def.cost,def.ore,"FABRICAR" if progress.recipe_unlocked(str(id)) else "RECEITA BLOQUEADA"];b.add_theme_font_size_override("font_size",15)
+			b.disabled=progress.d.inventory.has(id) or not progress.recipe_unlocked(str(id))
 			b.pressed.connect(craft_item.bind(id))
 		else:
 			b.text="EQUIPADO" if equipped else "EQUIPAR";b.disabled=equipped
@@ -624,10 +683,14 @@ func _physics_process(delta: float) -> void:
 	if screen=="combat":
 		var keys=Vector2(float(Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT))-float(Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT)),float(Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN))-float(Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP)))
 		move_axis=controls.axis if controls.axis.length()>.1 else keys.normalized()
+		if hit_stop>0:
+			hit_stop=maxf(0,hit_stop-delta);return
 		player.tick(delta)
 		for enemy in enemies:enemy.tick(delta)
 		world.tick(delta)
 		update_hud()
+		if interact_button!=null:interact_button.visible=not nearby_chest().is_empty()
+		world.refresh_gate()
 		if hero_dead:
 			wave_ready-=delta
 			if wave_ready<=0:fail_screen()
@@ -662,6 +725,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					KEY_E:player.request_skill(1)
 					KEY_R:player.request_supreme()
 					KEY_H:use_potion()
+					KEY_F:interact_chest()
 
 func back() -> void:
 	match screen:

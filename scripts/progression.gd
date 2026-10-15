@@ -13,7 +13,7 @@ func _init(content: DFContent, save_path: String = "user://dungeons_fires_save.j
 	d = fresh()
 
 func fresh() -> Dictionary:
-	return {"version":VERSION,"gold":160,"ore":12,"cloth":4,"ash":0,"cores":{},"hero":"varek","cleared":[],"inventory":["W_sword_0","W_staff_0","W_bow_0","A_body_0","A_boots_0","T_0"],"upgrades":{},"equipped":{"weapon":"W_sword_0","head":"","body":"A_body_0","boots":"A_boots_0","talisman":"T_0","relic":""},"heroes":{"varek":{"level":1,"xp":0,"talents":0},"maela":{"level":1,"xp":0,"talents":0},"neris":{"level":1,"xp":0,"talents":0}},"hub":{"forge":1,"sanctuary":1,"botica":1,"archive":1,"barracks":1},"settings":{"sound":true,"shake":true,"story_mode":false,"zoom":1.0},"run":{},"tutorial":false}
+	return {"version":VERSION,"gold":160,"ore":12,"cloth":4,"ash":0,"cores":{},"recipes":[],"hero":"varek","cleared":[],"inventory":["W_sword_0","W_staff_0","W_bow_0","A_body_0","A_boots_0","T_0"],"upgrades":{},"equipped":{"weapon":"W_sword_0","head":"","body":"A_body_0","boots":"A_boots_0","talisman":"T_0","relic":""},"heroes":{"varek":{"level":1,"xp":0,"talents":0},"maela":{"level":1,"xp":0,"talents":0},"neris":{"level":1,"xp":0,"talents":0}},"hub":{"forge":1,"sanctuary":1,"botica":1,"archive":1,"barracks":1},"settings":{"sound":true,"shake":true,"story_mode":false,"zoom":1.0},"run":{},"tutorial":false}
 
 func valid(value) -> bool:
 	if not value is Dictionary or int(value.get("version",0)) != VERSION:
@@ -48,8 +48,21 @@ func load_save() -> bool:
 			var value = parser.data
 			if valid(value):
 				d = value
+				migrate_recipes()
 				return true
 	return false
+
+func migrate_recipes() -> void:
+	if not d.get("recipes") is Array:d.recipes=[]
+	for region in range(5):
+		var id="R_%d"%region
+		if (d.cleared.has(region*3+2) or int(d.cores.get("CORE_%d"%region,0))>0 or d.inventory.has(id)) and not d.recipes.has(id):d.recipes.append(id)
+
+func recipe_unlocked(id: String) -> bool:
+	var def=db.item(id)
+	if def.get("core","")=="":return true
+	migrate_recipes()
+	return d.recipes.has(id)
 
 func save() -> bool:
 	last_error = ""
@@ -110,7 +123,7 @@ func buy_item(id: String) -> bool:
 	if d.inventory.size() >= 60: return false
 	if d.gold < def.cost or d.ore < def.ore: return false
 	var core = def.get("core","")
-	if core != "" and int(d.cores.get(core,0))<1: return false
+	if core != "" and (int(d.cores.get(core,0))<1 or not recipe_unlocked(id)): return false
 	if def.slot == "relic" and d.hub.forge<2: return false
 	var old = d.duplicate(true)
 	d.gold -= def.cost
@@ -178,6 +191,7 @@ func complete(index: int, loot: Dictionary) -> Dictionary:
 		d.ash += 6 if def.guardian else 1
 	if def.guardian:
 		d.cores[def.material] = int(d.cores.get(def.material,0))+1
+		migrate_recipes()
 	d.run = {}
 	if not save(): d = old; return {"error":"Não foi possível salvar. Tente novamente."}
 	return {"gold":gold,"ore":ore,"first":first,"items":acquired,"level":int(d.heroes[d.hero].level)}

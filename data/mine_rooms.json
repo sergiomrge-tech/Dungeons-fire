@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "rooms": [
+    {
+      "id": "MINE_00",
+      "name": "Entrada dos Sinos",
+      "background": "",
+      "props": [],
+      "chests": [],
+      "enemies": [
+        [
+          "knight",
+          670,
+          440,
+          1.0
+        ],
+        [
+          "archer",
+          840,
+          520,
+          1.0
+        ],
+        [
+          "brute",
+          1030,
+          472,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "MINE_01",
+      "name": "Galeria dos Trilhos",
+      "background": "mine_rails.webp",
+      "props": [
+        {
+          "x": 540,
+          "y": 515,
+          "solid": true,
+          "cell": 3
+        },
+        {
+          "x": 880,
+          "y": 436,
+          "solid": true,
+          "cell": 2
+        }
+      ],
+      "chests": [],
+      "enemies": [
+        [
+          "archer",
+          780,
+          482,
+          1.0
+        ],
+        [
+          "knight",
+          1010,
+          535,
+          1.0
+        ],
+        [
+          "knight",
+          1070,
+          440,
+          1.0
+        ],
+        [
+          "brute",
+          930,
+          498,
+          1.0
+        ]
+      ]
+    },
+    {
+      "id": "MINE_02",
+      "name": "Depósito do Capataz",
+      "background": "mine_store.webp",
+      "props": [
+        {
+          "x": 550,
+          "y": 535,
+          "solid": true,
+          "cell": 2
+        },
+        {
+          "x": 805,
+          "y": 435,
+          "solid": true,
+          "cell": 3
+        }
+      ],
+      "chests": [
+        {
+          "id": "MINE_CHEST_02",
+          "x": 1040,
+          "y": 510,
+          "gold": 30,
+          "ore": 4,
+          "cloth": 2
+        }
+      ],
+      "enemies": [
+        [
+          "knight",
+          700,
+          475,
+          1.0
+        ],
+        [
+          "archer",
+          1050,
+          445,
+          1.0
+        ],
+        [
+          "brute",
+          930,
+          520,
+          1.65
+        ]
+      ]
+    },
+    {
+      "id": "MINE_03",
+      "name": "Abrigo dos Mineiros",
+      "background": "mine_rest.webp",
+      "rest": true,
+      "props": [
+        {
+          "x": 510,
+          "y": 454,
+          "solid": false,
+          "cell": 6
+        },
+        {
+          "x": 920,
+          "y": 432,
+          "solid": false,
+          "cell": 7
+        }
+      ],
+      "chests": [
+        {
+          "id": "MINE_CHEST_03",
+          "x": 760,
+          "y": 510,
+          "gold": 15,
+          "ore": 3,
+          "cloth": 1
+        }
+      ],
+      "enemies": []
+    },
+    {
+      "id": "MINE_04",
+      "name": "Arena do Capataz Rusk",
+      "background": "mine_rusk.webp",
+      "props": [],
+      "chests": [],
+      "boss": "brute",
+      "boss_hp": 320
+    }
+  ]
+}
