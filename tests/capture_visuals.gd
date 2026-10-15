@@ -43,5 +43,8 @@ func run() -> void:
 	game.progress.d.hub.sanctuary=2
 	game.show_hub();await capture("08_hub_recovered")
 	game.show_journal();await capture("09_journal")
+	game.previous_screen="hub";game.show_inventory();await capture("10_inventory")
+	game.show_forge();await capture("11_forge")
+	game.show_buildings();await capture("12_camp_upgrades")
 	game.queue_free();await process_frame
 	quit()

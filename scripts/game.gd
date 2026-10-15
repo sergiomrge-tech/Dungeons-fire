@@ -4,8 +4,10 @@ const Actor = preload("res://scripts/actor.gd")
 const World = preload("res://scripts/world.gd")
 const Touch = preload("res://scripts/touch_controls.gd")
 const Progress = preload("res://scripts/progression.gd")
+const ClassicUI = preload("res://scripts/classic_ui.gd")
 const Content = preload("res://scripts/content.gd")
 
+var classic_ui
 var db: DFContent
 var progress: DFProgress
 var world: DFWorld
@@ -57,6 +59,7 @@ func _ready() -> void:
 		qa_mode=true;progress.path="user://qa_save.json"
 	progress.load_save()
 	game_theme = make_theme()
+	classic_ui=ClassicUI.new(self)
 	world=World.new();world.game=self;add_child(world)
 	actors=Node2D.new();add_child(actors)
 	camera=Camera2D.new();camera.position=Vector2(640,360);add_child(camera)
@@ -74,20 +77,20 @@ func _ready() -> void:
 func make_theme() -> Theme:
 	var t=Theme.new();t.default_font=load("res://assets/DejaVuSans.ttf");t.default_font_size=19
 	var panel_style=StyleBoxFlat.new()
-	panel_style.bg_color=Color(.96,.975,1,.96);panel_style.border_color=Color("839bbd")
+	panel_style.bg_color=Color(.20,.155,.12,.97);panel_style.border_color=Color("c6a56b")
 	panel_style.set_border_width_all(2);panel_style.set_corner_radius_all(7)
-	panel_style.shadow_color=Color(.12,.18,.30,.22);panel_style.shadow_size=6;panel_style.shadow_offset=Vector2(0,3)
+	panel_style.shadow_color=Color(0,0,0,.35);panel_style.shadow_size=6;panel_style.shadow_offset=Vector2(0,3)
 	panel_style.content_margin_left=16;panel_style.content_margin_top=10;panel_style.content_margin_right=16;panel_style.content_margin_bottom=10
 	t.set_stylebox("panel","Panel",panel_style)
-	var normal=panel_style.duplicate();normal.bg_color=Color("e5edf8");normal.border_color=Color("95acd0");normal.shadow_size=2
-	var hover=normal.duplicate();hover.bg_color=Color("f5faff");hover.border_color=Color("4f7eae")
-	var pressed=normal.duplicate();pressed.bg_color=Color("bed4ee");pressed.shadow_size=0
-	var disabled=normal.duplicate();disabled.bg_color=Color("d9dfe7");disabled.border_color=Color("b4bfce")
+	var normal=panel_style.duplicate();normal.bg_color=Color("35281f");normal.shadow_size=2
+	var hover=normal.duplicate();hover.bg_color=Color("57402b");hover.border_color=Color("efd39b")
+	var pressed=normal.duplicate();pressed.bg_color=Color("281e17");pressed.shadow_size=0
+	var disabled=normal.duplicate();disabled.bg_color=Color("302b24");disabled.border_color=Color("6f6551")
 	for pair in [["normal",normal],["hover",hover],["pressed",pressed],["disabled",disabled]]:t.set_stylebox(pair[0],"Button",pair[1])
-	var focus=normal.duplicate();focus.bg_color=Color.TRANSPARENT;focus.border_color=Color("dcac55");focus.set_border_width_all(3)
+	var focus=normal.duplicate();focus.bg_color=Color.TRANSPARENT;focus.border_color=Color("ffda8b");focus.set_border_width_all(3)
 	t.set_stylebox("focus","Button",focus)
-	t.set_color("font_color","Button",Color("304968"));t.set_color("font_hover_color","Button",Color("234261"));t.set_color("font_pressed_color","Button",Color("233d5e"));t.set_color("font_disabled_color","Button",Color("7b879b"))
-	t.set_color("font_color","Label",Color("30465e"))
+	t.set_color("font_color","Button",Color("f7e8c5"));t.set_color("font_hover_color","Button",Color("fff4d9"));t.set_color("font_pressed_color","Button",Color("f7e8c5"));t.set_color("font_disabled_color","Button",Color("a99d83"))
+	t.set_color("font_color","Label",Color("f7e8c5"))
 	return t
 
 func portrait(kind: String, pos: Vector2, dimensions: Vector2) -> TextureRect:
@@ -97,18 +100,20 @@ func portrait(kind: String, pos: Vector2, dimensions: Vector2) -> TextureRect:
 
 func meter(pos: Vector2, dimensions: Vector2, color: Color) -> ProgressBar:
 	var bar=ProgressBar.new();bar.show_percentage=false;bar.position=pos;bar.size=dimensions;bar.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	var bg=StyleBoxFlat.new();bg.bg_color=Color("d6deea");bg.set_corner_radius_all(4);bg.border_color=Color("8ea2bb");bg.set_border_width_all(1)
+	var bg=StyleBoxFlat.new();bg.bg_color=Color("29241e");bg.set_corner_radius_all(4);bg.border_color=Color("8a7959");bg.set_border_width_all(1)
 	var fill=StyleBoxFlat.new();fill.bg_color=color;fill.set_corner_radius_all(4)
 	bar.add_theme_stylebox_override("background",bg);bar.add_theme_stylebox_override("fill",fill);ui.add_child(bar);return bar
 
-func label(text: String, pos: Vector2, size: Vector2, font_size: int = 20, color: Color = Color("30465e")) -> Label:
+func label(text: String, pos: Vector2, size: Vector2, font_size: int = 20, color: Color = Color("f7e8c5")) -> Label:
 	var l=Label.new();l.text=text;l.position=pos;l.size=size;l.add_theme_font_size_override("font_size",font_size);l.add_theme_color_override("font_color",color);l.mouse_filter=Control.MOUSE_FILTER_IGNORE;ui.add_child(l);return l
 
 func button(text: String, pos: Vector2, size: Vector2, callback: Callable, disabled: bool = false) -> Button:
 	var b=Button.new();b.text=text;b.position=pos;b.size=size;b.disabled=disabled;b.pressed.connect(callback);ui.add_child(b);return b
 
 func panel(pos: Vector2, size: Vector2) -> Panel:
-	var p=Panel.new();p.position=pos;p.size=size;ui.add_child(p);return p
+	var p=Panel.new();p.position=pos;p.size=size;ui.add_child(p)
+	var trim=ClassicUI.Trim.new();trim.size=size;trim.wood=true;trim.color=Color("c6a56b");trim.mouse_filter=Control.MOUSE_FILTER_IGNORE;p.add_child(trim)
+	return p
 
 func clear_ui() -> void:
 	for child in ui.get_children():child.queue_free();ui.remove_child(child)
@@ -124,7 +129,7 @@ func clear_actors() -> void:
 func title(text: String, subtitle: String = "") -> void:
 	panel(Vector2(28,20),Vector2(1224,76))
 	label(text,Vector2(50,30),Vector2(1100,34),27)
-	label(subtitle,Vector2(52,66),Vector2(1100,25),16,Color("617a96"))
+	label(subtitle,Vector2(52,66),Vector2(1100,25),16,Color("c5b795"))
 
 func resources() -> String:
 	return "%d ouro   |   %d minério   |   %d Cinza Viva" % [progress.d.gold,progress.d.ore,progress.d.ash]
@@ -132,15 +137,15 @@ func resources() -> String:
 func show_menu() -> void:
 	clear_ui();clear_actors();screen="menu";world.change_theme(5)
 	panel(Vector2(48,100),Vector2(530,526))
-	label("DUNGEONS FIRES",Vector2(80,132),Vector2(490,60),40,Color("355882"))
-	label("AS CINCO BRASAS",Vector2(84,192),Vector2(450,36),23,Color("a47436"))
+	label("DUNGEONS FIRES",Vector2(80,132),Vector2(490,60),40,Color("efd39b"))
+	label("AS CINCO BRASAS",Vector2(84,192),Vector2(450,36),23,Color("e3b871"))
 	var intro=label("Um fogo que apaga memórias.\nUm refúgio que ainda lembra.",Vector2(84,248),Vector2(450,64),20)
 	intro.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	button("ENTRAR NO REFÚGIO",Vector2(84,339),Vector2(458,58),show_hub)
 	button("RETOMAR EXPEDIÇÃO",Vector2(84,410),Vector2(458,55),resume_run,progress.d.run.is_empty())
 	button("HISTÓRIA",Vector2(84,482),Vector2(220,53),func():show_lore(false))
 	button("OPÇÕES",Vector2(320,482),Vector2(222,53),func():previous_screen="menu";show_settings())
-	label("v0.3.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("617a96"))
+	label("v0.4.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("c5b795"))
 	var hero=spawn_actor(progress.d.hero,Vector2(870,550),true,180,28);hero.size_scale=2.7
 	label("Seu próximo capítulo começa aqui.",Vector2(710,590),Vector2(500,35),21,Color("ffffff"))
 
@@ -161,25 +166,12 @@ func relic_effect() -> String:
 
 func show_hub() -> void:
 	clear_ui();clear_actors();screen="hub";hero_dead=false;world.change_theme(5)
-	title("ACAMPAMENTO DA ÚLTIMA CHAMA",resources())
 	spawn_actor(progress.d.hero,Vector2(635,488),true,progress.hero_stats().hp,progress.hero_stats().attack)
 	spawn_actor("knight",Vector2(289,473),false,100,0)
 	spawn_actor("maela",Vector2(997,488),false,100,0)
 	if progress.d.cleared.size() >= 3:
 		spawn_actor("neris",Vector2(1138,493),false,100,0)
-	panel(Vector2(190,493),Vector2(204,38));label("Doran • Forja %d"%progress.d.hub.forge,Vector2(204,499),Vector2(190,28),17)
-	panel(Vector2(903,508),Vector2(205,38));label("Iria • Arquivo %d"%progress.d.hub.archive,Vector2(917,514),Vector2(190,28),17)
-	panel(Vector2(530,500),Vector2(215,38));label("%s • Nível %d"%[progress.d.hero.capitalize(),progress.hero_stats().level],Vector2(545,506),Vector2(190,28),17)
-	button("MAPA DE MASMORRAS  →",Vector2(452,558),Vector2(376,58),func():show_map(progress.stage()))
-	button("DIÁRIO DE EDRAVA",Vector2(1038,121),Vector2(211,49),show_journal)
-	button("MOCHILA",Vector2(28,643),Vector2(174,52),func():previous_screen="hub";show_inventory())
-	button("FORJA",Vector2(215,643),Vector2(155,52),show_forge)
-	button("REFÚGIO",Vector2(383,643),Vector2(166,52),show_buildings)
-	button("HERÓIS",Vector2(562,643),Vector2(153,52),show_heroes)
-	button("TALENTOS",Vector2(728,643),Vector2(180,52),show_talents)
-	button("LORE",Vector2(921,643),Vector2(145,52),func():show_lore(true))
-	button("MENU",Vector2(1079,643),Vector2(173,52),show_menu)
-	if not progress.d.run.is_empty():button("RETOMAR",Vector2(872,560),Vector2(214,54),resume_run)
+	classic_ui.build()
 	if not progress.d.tutorial:
 		progress.d.tutorial=true;progress.save()
 		toast("Comece na Mina dos Sinos pelo mapa. Equipe e melhore na forja.",7)
@@ -190,8 +182,8 @@ func show_journal() -> void:
 	title("DIÁRIO DE EDRAVA","Iria registra os nomes restaurados e os caminhos abertos.")
 	var completed: int = progress.d.cleared.size()
 	var next_index: int = progress.unlocked()
-	label("CRÔNICAS DAS CINCO BRASAS",Vector2(100,144),Vector2(800,42),28,Color("355882"))
-	label("%d / 15 expedições concluídas"%completed,Vector2(830,151),Vector2(330,34),20,Color("a47436"))
+	label("CRÔNICAS DAS CINCO BRASAS",Vector2(100,144),Vector2(800,42),28,Color("efd39b"))
+	label("%d / 15 expedições concluídas"%completed,Vector2(830,151),Vector2(330,34),20,Color("e3b871"))
 	for chapter in range(5):
 		var total: int = 0
 		for idx in range(chapter*3,chapter*3+3):
@@ -200,11 +192,12 @@ func show_journal() -> void:
 		var is_next: bool = (next_index / 3) == chapter and not progress.d.cleared.has(14)
 		var region_title: String = str(db.regions[chapter])
 		var status: String = "BRASA RECUPERADA" if total==3 else ("%d de 3 expedições" % total)
-		label(("✦  " if total==3 else ("➤  " if is_next else "•  "))+region_title,Vector2(105,y),Vector2(670,31),22,Color("a47436") if total==3 else Color("304968"))
-		label(status,Vector2(822,y+2),Vector2(330,29),18,Color("547f5e") if total==3 else Color("617a96"))
+		label(("✦  " if total==3 else ("➤  " if is_next else "•  "))+region_title,Vector2(105,y),Vector2(670,31),22,Color("e3b871") if total==3 else Color("ead9b4"))
+		label(status,Vector2(822,y+2),Vector2(330,29),18,Color("a4cd91") if total==3 else Color("c5b795"))
 	var destination: String = "Os cinco guardiões libertados. O Refúgio floresce." if progress.d.cleared.has(14) else ("Próxima jornada: "+str(db.dungeons[next_index].name))
-	label(destination,Vector2(103,557),Vector2(1050,38),19,Color("355882"))
+	label(destination,Vector2(103,557),Vector2(1050,38),19,Color("efd39b"))
 	button("IR PARA O MAPA",Vector2(105,606),Vector2(365,53),func():show_map(progress.stage()))
+	button("HISTÓRIA",Vector2(490,606),Vector2(280,53),func():show_lore(true))
 	button("VOLTAR AO REFÚGIO",Vector2(794,606),Vector2(368,53),show_hub)
 
 func show_map(region: int = 0) -> void:
@@ -212,13 +205,13 @@ func show_map(region: int = 0) -> void:
 	panel(Vector2(25,20),Vector2(1230,677));title("MAPA DE EDRAVA","%d/15 expedições concluídas • Cada vitória abre o próximo caminho."%progress.d.cleared.size())
 	for r in range(5):
 		button("%d • %s" %[r+1,db.regions[r].split(" ")[0]],Vector2(52+r*240,124),Vector2(223,55),func():show_map(r),false)
-	label(db.regions[current_map_region],Vector2(57,204),Vector2(1100,40),29,Color("355882"))
+	label(db.regions[current_map_region],Vector2(57,204),Vector2(1100,40),29,Color("efd39b"))
 	for local in range(3):
 		var index=current_map_region*3+local
 		var def=db.dungeons[index]
 		var pos=Vector2(54+local*399,273)
 		panel(pos,Vector2(377,278))
-		label("%02d   %s" %[index+1,"GUARDIÃO" if def.guardian else "EXPEDIÇÃO"],pos+Vector2(16,18),Vector2(345,26),18,Color("a4773c"))
+		label("%02d   %s" %[index+1,"GUARDIÃO" if def.guardian else "EXPEDIÇÃO"],pos+Vector2(16,18),Vector2(345,26),18,Color("d3b37a"))
 		var name=label(def.name,pos+Vector2(16,57),Vector2(345,72),23);name.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		label("5 salas • Nível sugerido %d"%def.level,pos+Vector2(16,137),Vector2(344,30),17)
 		label("%d ouro + %d minério"%[def.reward_gold,def.reward_ore],pos+Vector2(16,174),Vector2(344,26),17)
@@ -236,7 +229,7 @@ func show_preparation(index: int) -> void:
 	var lore_label=label(db.dungeons[index].lore,Vector2(210,233),Vector2(850,108),22);lore_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	label("Analógico: mover  |  Golpe: combo  |  Esquiva: evitar dano",Vector2(210,365),Vector2(890,30),20)
 	label("Duas técnicas + Brasa suprema. Poções limitadas por expedição.",Vector2(210,405),Vector2(890,30),19)
-	label("Solo • 5 salas • Vitória deposita saque no refúgio",Vector2(210,448),Vector2(890,30),18,Color("617a96"))
+	label("Solo • 5 salas • Vitória deposita saque no refúgio",Vector2(210,448),Vector2(890,30),18,Color("c5b795"))
 	button("ENTRAR NA MASMORRA",Vector2(210,518),Vector2(490,66),func():confirm_start(index))
 	button("VOLTAR",Vector2(745,518),Vector2(300,66),func():show_map(int(index/3)))
 
@@ -307,10 +300,10 @@ func combat_ui() -> void:
 	mana_bar=meter(Vector2(114,94),Vector2(263,9),Color("6b9bce"));mana_bar.max_value=100
 	panel(Vector2(420,20),Vector2(388,65))
 	label(db.dungeons[dungeon].name,Vector2(438,29),Vector2(360,28),18)
-	expedition_status=label("Sala %d / 5  •  Poções %d"%[room+1,potions],Vector2(438,56),Vector2(360,24),14,Color("617a96"))
+	expedition_status=label("Sala %d / 5  •  Poções %d"%[room+1,potions],Vector2(438,56),Vector2(360,24),14,Color("c5b795"))
 	button("MOCHILA",Vector2(838,24),Vector2(170,57),func():save_run();previous_screen="combat";show_inventory())
 	button("PAUSA",Vector2(1023,24),Vector2(200,57),show_pause)
-	boss_hud=label("",Vector2(630,135),Vector2(600,62),21,Color("483a53"))
+	boss_hud=label("",Vector2(630,135),Vector2(600,62),21,Color("f0dab0"))
 	if cleared_room:
 		button("PRÓXIMA SALA  →",Vector2(469,284),Vector2(350,62),next_room)
 		button("DEPOSITAR E RETIRAR",Vector2(469,357),Vector2(350,54),retreat)
@@ -432,7 +425,7 @@ func finish_dungeon() -> void:
 		dialog("Falha ao salvar",result.error,"TENTAR NOVAMENTE",finish_dungeon,show_menu);return
 	clear_ui();screen="result"
 	panel(Vector2(170,128),Vector2(940,470))
-	label("MASMORRA CONCLUÍDA",Vector2(218,166),Vector2(850,55),36,Color("a47436"))
+	label("MASMORRA CONCLUÍDA",Vector2(218,166),Vector2(850,55),36,Color("e3b871"))
 	label(db.dungeons[dungeon].name,Vector2(218,235),Vector2(850,55),25)
 	label("+%d ouro    +%d minério\nHerói nível %d • %d equipamentos obtidos"%[result.gold,result.ore,result.level,result.items.size()],Vector2(218,307),Vector2(850,80),25)
 	var message="Nova rota disponível no mapa." if result.first else "Materiais recebidos para novas melhorias."
@@ -517,7 +510,7 @@ func item_scroll(ids: Array, crafting: bool) -> void:
 		var current=db.item(str(progress.d.equipped.get(def.slot,"")))
 		var diff=float(def.attack)-float(current.get("attack",0))
 		text.text="%s +%d  %s\n%s • Atq %d / Def %d • Comparação atq %+d" %[def.name,n,"[EQUIPADO]" if equipped else "",["Comum","Raro","Épico","Lendário"][int(def.rarity)],def.attack,def.defense,diff]
-		text.add_theme_color_override("font_color",[Color("465a70"),Color("346995"),Color("79539a"),Color("9a662e")][int(def.rarity)]);row.add_child(text)
+		text.add_theme_color_override("font_color",[Color("e4d5b2"),Color("8dc8ef"),Color("d0a0ed"),Color("f4c278")][int(def.rarity)]);row.add_child(text)
 		var b=Button.new();b.custom_minimum_size=Vector2(205,60);row.add_child(b)
 		if crafting:
 			b.text="%d ouro / %d minério\nFABRICAR"%[def.cost,def.ore];b.add_theme_font_size_override("font_size",15)
@@ -557,7 +550,7 @@ func show_heroes() -> void:
 	var desc=["Guardião da Forja\nEspada/escudo ou martelo\nTécnicas de impacto e proteção","Tecelã de Cinzas\nCajado ou foco\nMagia, mana e controle em área","Vigia dos Caminhos\nLâminas ou arco\nMobilidade, projéteis e flanco"]
 	for i in range(3):
 		var id=ids[i];var req=[0,3,6][i];var x=90+i*386
-		label(id.capitalize(),Vector2(x,158),Vector2(350,40),30,Color("355882"))
+		label(id.capitalize(),Vector2(x,158),Vector2(350,40),30,Color("efd39b"))
 		portrait(id,Vector2(x+108,206),Vector2(130,140))
 		label(desc[i],Vector2(x,350),Vector2(350,100),18)
 		label("Liberado" if progress.unlocked()>=req else "Conclua %d masmorras"%req,Vector2(x,455),Vector2(350,35),19)
@@ -579,7 +572,7 @@ func show_lore(from_hub: bool) -> void:
 	clear_ui();screen="lore";panel(Vector2(105,80),Vector2(1070,577));title("A VIGÍLIA DOS NOMES","Arquivo de Iria")
 	var text="Edrava nasceu sobre os ossos da Mãe da Aurora. Cinco brasas mantinham suas terras vivas, alimentadas pelas histórias dos que partiram.\n\nSeveran tentou trazer sua filha de volta queimando lembranças arrancadas dos vivos. O ritual criou o Incêndio Branco: uma chama fria que apaga nomes e aprisiona os mortos.\n\nNo Refúgio da Última Chama, Iria guarda um livro de nomes proibidos. Você é um Portador de Brasa, capaz de recuperar os guardiões e devolver ao mundo o direito de mudar."
 	var l=label(text,Vector2(157,162),Vector2(960,344),23);l.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	label("Brasas recuperadas: %d de 5"%[progress.d.cleared.filter(func(i):return int(i)%3==2).size()],Vector2(159,533),Vector2(730,45),22,Color("a47436"))
+	label("Brasas recuperadas: %d de 5"%[progress.d.cleared.filter(func(i):return int(i)%3==2).size()],Vector2(159,533),Vector2(730,45),22,Color("e3b871"))
 	button("VOLTAR / X",Vector2(788,580),Vector2(310,55),back)
 
 func show_settings() -> void:

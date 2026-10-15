@@ -33,3 +33,7 @@ Capturas reais do Godot identificaram retratos que excediam o painel, barras com
 ## Refúgio aprovado como acampamento — 15/10/2026
 
 Sergio aprovou a direção visual da v0.3.1. Preservar o estilo dos personagens, cenários e interface. Sua alteração específica para o hub substitui a cidade por acampamento com fogueira central, barracas e floresta atrás. O novo master original é `art_sources/hub_camp_v1.png`, convertido pelo importador para `assets/painted_worlds/hub_camp.webp`. Esse asset é usado no tema 5: menu, hub e diário. Os sistemas e saves continuam iguais. Lanternas, brasas e bandeirolas ficam ancoradas nos elementos do acampamento.
+
+## Opção 1 aprovada — interface clássica v0.4
+
+Em 15/10/2026, Sergio escolheu a opção 1: madeira, bronze, texto marfim e barra inferior. `scripts/classic_ui.gd` integra essa apresentação ao hub real, com dados persistentes, botões funcionais e atalhos para melhorias/menu/retomada. Os demais menus e controles de combate seguem a mesma paleta. Preservar a aparência do acampamento e dos personagens. Protótipos das opções 2 e 3 ficam na branch de design, sem substituir a opção aprovada.

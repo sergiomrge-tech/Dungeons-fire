@@ -1,6 +1,10 @@
-# Dungeons Fires: As Cinco Brasas - v0.3.0
+# Dungeons Fires: As Cinco Brasas - v0.4.0
 
 Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-fire. Abra o `project.godot` na raiz deste repositório.
+
+## Interface clássica v0.4 — opção 1 aprovada
+
+Madeira escura, bronze e texto marfim compõem o layout escolhido por Sergio. O refúgio usa barra inferior com ícones e acesso central à exploração; o retrato, nível, experiência e recursos leem os dados reais do save. Melhorias do refúgio, menu, história e retomada continuam acessíveis. O tema é aplicado também às telas de mapa, mochila, forja, heróis e combate, mantendo posições e funcionamento dos controles touch. O módulo de produção `scripts/classic_ui.gd` não depende de ferramentas ou cenas de teste. Esta alteração é do projeto Godot; o APK v0.3.1 já entregue é anterior ao novo acampamento e à interface clássica.
 
 ## Refúgio como acampamento
 
