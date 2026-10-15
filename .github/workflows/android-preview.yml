@@ -2,12 +2,12 @@ name: Build Android preview APK
 on:
   push:
     branches:
-      - build/android-preview-v0.3
+      - build/android-classic-v0.4.0
     paths:
       - '.github/workflows/android-preview.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: dungeons-android-preview-${{ github.ref }}
   cancel-in-progress: true
@@ -66,8 +66,8 @@ jobs:
           f=Path('export_presets.cfg')
           s=f.read_text()
           assert 'package/unique_name="com.sergiomrge.dungeonsfires"' in s
-          s=s.replace('package/unique_name="com.sergiomrge.dungeonsfires"','package/unique_name="com.sergiomrge.dungeonsfires.preview"')
-          s=s.replace('package/name="Dungeons Fires"','package/name="Dungeons Fires Preview"')
+          s=s.replace('package/unique_name="com.sergiomrge.dungeonsfires"','package/unique_name="com.sergiomrge.dungeonsfires.preview.v040"')
+          s=s.replace('package/name="Dungeons Fires"','package/name="Dungeons Fires Preview 0.4"')
           s=s.replace('package/signed=false','package/signed=true')
           f.write_text(s)
           PY
@@ -85,21 +85,53 @@ jobs:
           set -euo pipefail
           cp "$HOME/.android/dungeons_preview.keystore" "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
           mkdir -p /tmp/preview
-          Godot_v4.6.1-stable_linux.x86_64 --headless --export-debug Android /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
-          test -s /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
+          Godot_v4.6.1-stable_linux.x86_64 --headless --export-debug Android /tmp/preview/Dungeons_Fires_v0_4_0_Android.apk
+          test -s /tmp/preview/Dungeons_Fires_v0_4_0_Android.apk
       - name: Verify APK integrity and signature
         run: |
           set -euo pipefail
-          APK=/tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
+          APK=/tmp/preview/Dungeons_Fires_v0_4_0_Android.apk
           unzip -t "$APK" | tail -n 2
           "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$APK" | head -n 3
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -c -P 16 -v 4 "$APK" > /tmp/preview-alignment.txt
+          tail -n 1 /tmp/preview-alignment.txt
+          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$APK" > /tmp/preview-badging.txt
+          sed -n '1,3p' /tmp/preview-badging.txt
+          grep -F "com.sergiomrge.dungeonsfires.preview.v040" /tmp/preview-badging.txt
+          grep -F "versionName='0.4.0'" /tmp/preview-badging.txt
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          apk=Path('/tmp/preview/Dungeons_Fires_v0_4_0_Android.apk')
+          with zipfile.ZipFile(apk) as z:
+              names=z.namelist()
+              assert z.testzip() is None
+              assert 'assets/scripts/classic_ui.gdc' in names, 'Classic UI must be exported'
+              assert any('hub_camp.webp-' in n for n in names), 'Forest camp background must be exported'
+              assert not any(n.startswith(('assets/tests/','assets/art_sources/','assets/tools/','assets/builds/')) for n in names), 'Exclude internal sources from APK'
+              assert not any(n.endswith(('.keystore','.jks')) for n in names), 'No signing key in APK'
+          print('APK_CONTENT: classic UI and forest camp verified; internal tooling excluded')
+          PY
           sha256sum "$APK" | tee /tmp/preview/sha256.txt
           echo "Preview uses an isolated ephemeral debug certificate and distinct Android application ID. It can coexist with the signed v0.1.0. Keys are never committed." > /tmp/preview/README.txt
       - name: Upload Android APK preview
         uses: actions/upload-artifact@v4
         with:
-          name: Dungeons-Fires-Android-v030-preview
+          name: Dungeons-Fires-Android-v040-preview
           path: /tmp/preview/*
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish verified APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd /tmp/preview
+          sha256sum -c sha256.txt
+          gh release create v0.4.0-preview \
+            Dungeons_Fires_v0_4_0_Android.apk sha256.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Dungeons Fires v0.4.0 — Acampamento e interface clássica" \
+            --notes "APK Android arm64 com acampamento na floresta, fogueira central, opção 1 de interface clássica e cenário visível na seleção de masmorras. Conteúdo, CRC, assinatura e alinhamento de 16 KB verificados. App independente com.sergiomrge.dungeonsfires.preview.v040, instalado ao lado das prévias anteriores. Não testado em aparelho físico." \
+            --prerelease --target "$GITHUB_SHA" --latest=false
