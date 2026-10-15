@@ -1,14 +1,24 @@
-# Dungeons Fires: As Cinco Brasas - v0.4.0
+# Dungeons Fires: As Cinco Brasas - v0.5.0
 
 Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-fire. Abra o `project.godot` na raiz deste repositório.
 
+## Primeira região v0.5
+
+- Varek: combo de três golpes com entrada antecipada, corrida com aceleração, esquiva e avanço com colisão, breve pausa no impacto e defesa frontal com janela perfeita de 0,20 s. A técnica de proteção usa escudo; não lança magia. As oito poses originais foram preservadas e o ritmo/movimento refinado.
+- Mina dos Sinos: entrada, galeria de trilhos com obstáculos reais, depósito com elite e baú, abrigo seguro com descanso e baú e arena do Capataz Rusk. Quatro pinturas novas, atlas de oito props, navegação ao redor de objetos, bloqueio de tiros e saque sem duplicação após retomar.
+- Garron: corte frontal, impacto e investida, avisos fixos no chão, janela de recuperação e segunda fase em 55% de vida. Rusk utiliza impacto e corte com recuperação.
+- Recompensa regional: Núcleo de Garron libera a receita Marca do Portão na Forja 2. Uma defesa válida carrega o próximo golpe: +25% de dano e 2,5x dano de postura, com brilho dourado. A receita migra nos saves anteriores; esquiva não carrega o efeito.
+- O acampamento, a interface clássica e o mapa visível aprovados permanecem como referência.
+
+A validação e a exportação Android desta versão ficam registradas em `docs/QA_v0_5.md`. O APK legado de `builds/` permanece imutável. As novas prévias Android têm identificador próprio e são entregues diretamente no chat.
+
 ## Interface clássica v0.4 — opção 1 aprovada
 
-Madeira escura, bronze e texto marfim compõem o layout escolhido por Sergio. O refúgio usa barra inferior com ícones e acesso central à exploração; o retrato, nível, experiência e recursos leem os dados reais do save. A composição do hub segue a opção 1: melhorias do refúgio pela fogueira, menu pelo retrato, história pelo diário e retomada quando há expedição salva. O mapa preserva o cenário visível, com três marcos de masmorras e detalhes concentrados na faixa inferior. O tema é aplicado também às telas de mapa, mochila, forja, heróis e combate, mantendo posições e funcionamento dos controles touch. O módulo de produção `scripts/classic_ui.gd` não depende de ferramentas ou cenas de teste. Esta alteração é do projeto Godot; o APK v0.3.1 já entregue é anterior ao novo acampamento e à interface clássica.
+Madeira escura, bronze e texto marfim compõem o layout escolhido por Sergio. O refúgio usa barra inferior com ícones e acesso central à exploração; o retrato, nível, experiência e recursos leem os dados reais do save. A composição do hub segue a opção 1: melhorias do refúgio pela fogueira, menu pelo retrato, história pelo diário e retomada quando há expedição salva. O mapa preserva o cenário visível, com três marcos de masmorras e detalhes concentrados na faixa inferior. O tema é aplicado também às telas de mapa, mochila, forja, heróis e combate, mantendo posições e funcionamento dos controles touch. O módulo de produção `scripts/classic_ui.gd` não depende de ferramentas ou cenas de teste. O APK v0.4.0 já entregue inclui o acampamento e esta interface.
 
 ## Refúgio como acampamento
 
-A pedido de Sergio, o refúgio agora é uma clareira na floresta, com fogueira central e barracas. A direção fantasia anime aprovada, os heróis e a interface permanecem como referência visual. A fogueira recebe brilho e pequenas brasas animadas; a recuperação do refúgio acende as lanternas das barracas e acrescenta detalhes ao acampamento. O APK v0.3.1 já entregue é anterior a esta alteração.
+A pedido de Sergio, o refúgio agora é uma clareira na floresta, com fogueira central e barracas. A direção fantasia anime aprovada, os heróis e a interface permanecem como referência visual. A fogueira recebe brilho e pequenas brasas animadas; a recuperação do refúgio acende as lanternas das barracas e acrescenta detalhes ao acampamento. O APK v0.4.0 já entregue inclui o acampamento.
 
 ## Avanço v0.3 — Refúgio vivo e legibilidade do combate
 
@@ -37,7 +47,7 @@ Visual de fantasia anime inspirado na referência Ragnarok Online: seis ambiente
 
 Esta é uma base jogável em evolução, não o lançamento final descrito no GDD. Os personagens e ambientes ilustrados são originais. As poses produzidas foram integradas aos estados reais de combate; transições, alinhamento dos sprites e acabamento visual ainda podem ser refinados.
 
-As quinze expedições usam encontros e arenas derivados de templates; não são quinze masmorras finais com level design exclusivo. Há três arquétipos comuns e variações de chefes. Cada classe tem duas técnicas fixas nesta versão; as 18 skills planejadas e as árvores completas ainda não estão implementadas. Talentos atuais aumentam vida/ataque. Estruturas Arquivo/Quartel têm aprimoramento persistente e leitura narrativa, mas missões pessoais/arena/contratos ainda são futuros. Não há afixos aleatórios, desmontagem, loadouts, Veterano ou quatro sets visuais de armadura por herói.
+A Mina tem cinco salas com composição própria. As demais quatorze expedições ainda usam encontros e arenas derivados de templates; não são quinze masmorras finais com level design exclusivo. Há três arquétipos comuns e variações de chefes. Cada classe tem duas técnicas fixas nesta versão; as 18 skills planejadas e as árvores completas ainda não estão implementadas. Talentos atuais aumentam vida/ataque. Estruturas Arquivo/Quartel têm aprimoramento persistente e leitura narrativa, mas missões pessoais/arena/contratos ainda são futuros. Não há afixos aleatórios, desmontagem, loadouts, Veterano ou quatro sets visuais de armadura por herói.
 
 Equipamentos repetidos ou recebidos com mochila cheia convertem em três minérios, regra temporária mostrada no inventário. Primeiras conclusões também garantem uma arma compatível. A duração de 8-15 minutos do GDD é uma meta futura; as arenas de v0.1 são mais curtas.
 
@@ -47,7 +57,7 @@ APK de teste: [Dungeons_Fires_v0_1_0_Android.apk](builds/Dungeons_Fires_v0_1_0_A
 
 Abra o `project.godot` desta pasta com Godot 4.6.1 ou versão compatível. Este repositório contém apenas Dungeons Fires. O import de assets é feito pelo editor. Android: APK para arm64, Android 7.0/API 24 ou superior, tela horizontal, sem acesso à internet obrigatório.
 
-Teclado de teste: WASD/setas para andar; J/espaço golpe; K esquiva; Q/E técnicas; R suprema; H cura; Esc pausa/voltar. No celular, use o analógico e os botões desenhados na base da tela. Comece pela Mina dos Sinos no mapa.
+Teclado de teste: WASD/setas para andar; J/espaço golpe; K esquiva; Q/E técnicas; R suprema; H cura; F abrir baú próximo; Esc pausa/voltar. No celular, use o analógico e os botões desenhados na base da tela. Comece pela Mina dos Sinos no mapa.
 
 ## Validação
 

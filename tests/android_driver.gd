@@ -1,18 +1,18 @@
 extends Node
 # Included only in an isolated x86_64 QA export, never in the delivered APK.
 var game
-var report={"checks":{},"stage":"starting","platform":OS.get_name()}
+var report={"checks":{},"stage":"starting","platform":OS.get_name(),"touch_source":"synthetic Input.parse_input_event with viewport-to-screen mapping"}
 var frames=[]
 var measuring=false
 func write_report() -> void:
 	var f=FileAccess.open("user://android_qa.json",FileAccess.WRITE)
 	f.store_string(JSON.stringify(report));f.flush();f.close()
 func touch(id: int, pos: Vector2, pressed: bool) -> void:
-	var e=InputEventScreenTouch.new();e.index=id;e.position=pos;e.pressed=pressed;Input.parse_input_event(e)
+	var e=InputEventScreenTouch.new();e.index=id;e.position=game.get_viewport().get_screen_transform()*pos;e.pressed=pressed;Input.parse_input_event(e)
 func _process(delta: float) -> void:
 	if measuring:frames.append(delta)
 func _notification(what: int) -> void:
-	if what in [NOTIFICATION_APPLICATION_PAUSED,NOTIFICATION_APPLICATION_FOCUS_OUT] and report.get("stage")=="checkpoint":call_deferred("record_pause")
+	if what in [NOTIFICATION_APPLICATION_PAUSED,NOTIFICATION_APPLICATION_FOCUS_OUT] and report.get("stage")=="checkpoint":record_pause()
 func record_pause() -> void:
 	report.checks.pause_clears_controls=not game.controls.active and game.controls.axis==Vector2.ZERO and not game.attack_held
 	report.checks.pause_screen=game.screen=="pause"
@@ -46,7 +46,7 @@ func _ready() -> void:
 	var total=0.0;var worst=0.0
 	for delta in frames:total+=delta;worst=maxf(worst,delta)
 	report.performance={"sample_frames":frames.size(),"average_fps":frames.size()/maxf(total,.001),"worst_frame_ms":worst*1000,"static_memory_bytes":Performance.get_monitor(Performance.MEMORY_STATIC),"scope":"API29 x86_64 emulator; not a physical-device benchmark"}
-	game.set_physics_process(false);game.room=2;game.spawn_room();game.player.position=Vector2(1040,510);game.interact_chest()
+	game.set_physics_process(false);game.room=2;game.spawn_room();game.player.position=Vector2(650,520);game.interact_chest()
 	game.player.hp=73;game.potions=1;game.player.mana=47;game.save_run()
 	var checkpoint=FileAccess.open("user://android_checkpoint.json",FileAccess.WRITE);checkpoint.store_string("ready");checkpoint.close()
 	report.checks.chest_opened=game.room_events.has("MINE_CHEST_02")

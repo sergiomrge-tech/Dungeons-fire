@@ -12,6 +12,7 @@ var mouse_down: bool = false
 var font: Font
 var buttons: Dictionary = {"attack":Vector2(1130,611),"dodge":Vector2(987,625),"skill0":Vector2(1050,504),"skill1":Vector2(1180,493),"supreme":Vector2(893,513),"potion":Vector2(398,628)}
 var cooldowns: Dictionary = {}
+var hero_kind: String = "varek"
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -67,6 +68,7 @@ func _draw() -> void:
 		var dir=Vector2.RIGHT.rotated(i*PI/2)
 		draw_line(stick_center+dir*52,stick_center+dir*65,Color(.96,.87,.66,.8),3)
 	var labels = {"attack":"GOLPE","dodge":"ESQUIVA","skill0":"TÉCNICA","skill1":"PODER","supreme":"BRASA","potion":"CURAR"}
+	if hero_kind=="varek":labels.skill0="AVANÇO";labels.skill1="DEFESA"
 	for name in buttons:
 		var center: Vector2 = buttons[name]
 		var r = 61 if name=="attack" else 45
@@ -99,6 +101,12 @@ func draw_symbol(name: String, at: Vector2, color: Color) -> void:
 			draw_rect(Rect2(at+Vector2(-6,-15),Vector2(12,12)),color)
 			draw_line(at+Vector2(-7,6),at+Vector2(7,6),Color.WHITE,3)
 			draw_line(at+Vector2(0,-1),at+Vector2(0,13),Color.WHITE,3)
+		"skill1":
+			if hero_kind=="varek":
+				var shield=PackedVector2Array([at+Vector2(-16,-17),at+Vector2(16,-17),at+Vector2(14,8),at+Vector2(0,22),at+Vector2(-14,8),at+Vector2(-16,-17)])
+				draw_colored_polygon(shield,Color(.72,.57,.33,.3));draw_polyline(shield,color,3,true)
+				draw_line(at+Vector2(0,-12),at+Vector2(0,13),color,2,true)
+			else:draw_circle(at,16,color);draw_circle(at,8,Color("35281f"))
 		_:
 			var points=PackedVector2Array()
 			for i in range(10):

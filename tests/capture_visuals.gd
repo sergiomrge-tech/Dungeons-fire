@@ -37,10 +37,11 @@ func run() -> void:
 	game.start_dungeon(0)
 	for room in range(5):
 		game.room=room;game.spawn_room();game.combat_ui()
-		if room==2:game.player.position=Vector2(970,510);game.interact_button.visible=true
+		if room==2:game.player.position=Vector2(580,510);game.interact_button.visible=true
+		if room==3:game.cleared_room=true;game.combat_ui();game.world.refresh_gate()
 		await capture("13_mine_room_%d"%room)
 	game.start_dungeon(2);game.room=4;game.spawn_room();game.combat_ui()
-	var boss=game.enemies[0];game.player.position=Vector2(710,480);boss.cooldown=0;boss.tick(.017);game.world.tick(.017)
+	var boss=game.enemies[0];game.player.position=Vector2(795,480);boss.cooldown=0;boss.tick(.017);game.world.tick(.017)
 	await capture("14_garron_warning")
 	boss.hp=boss.max_hp*.5;boss.tick(.017);boss.state="idle";boss.cooldown=0;boss.tick(.017);game.world.tick(.017);game.update_hud()
 	await capture("15_garron_phase_II")

@@ -26,7 +26,7 @@ func run() -> void:
 	var route=original
 	for i in range(600):route=game.move_actor(route,game.room_layout.direction(route,Vector2(700,515))*2)
 	check(route.distance_to(Vector2(700,515))<15,"navigation goes around cart without trapping")
-	game.room=2;game.spawn_room();hero.position=Vector2(1040,510)
+	game.room=2;game.spawn_room();hero.position=Vector2(650,520)
 	check(game.enemies.any(func(e):return e.elite),"storeroom elite has distinct durable encounter")
 	var gold=game.loot.gold;game.interact_chest()
 	check(game.loot.gold==gold+30 and game.room_events.has("MINE_CHEST_02"),"chest grants resources once")

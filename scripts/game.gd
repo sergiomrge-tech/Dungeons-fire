@@ -71,7 +71,7 @@ func _ready() -> void:
 	var canvas_layer = CanvasLayer.new();add_child(canvas_layer)
 	ui=Control.new();ui.theme=game_theme;ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);ui.mouse_filter=Control.MOUSE_FILTER_IGNORE;canvas_layer.add_child(ui)
 	controls=Touch.new();controls.action.connect(on_action);canvas_layer.add_child(controls)
-	toast_label=Label.new();toast_label.theme=game_theme;toast_label.position=Vector2(330,116);toast_label.size=Vector2(620,50);toast_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;toast_label.add_theme_color_override("font_color",Color("ffdfa1"));toast_label.add_theme_color_override("font_outline_color",Color("263a55"));toast_label.add_theme_constant_override("outline_size",6);toast_label.mouse_filter=Control.MOUSE_FILTER_IGNORE;canvas_layer.add_child(toast_label)
+	toast_label=Label.new();toast_label.theme=game_theme;toast_label.position=Vector2(330,116);toast_label.size=Vector2(620,50);toast_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;toast_label.add_theme_color_override("font_color",Color("ffdfa1"));toast_label.add_theme_color_override("font_outline_color",Color("263a55"));toast_label.add_theme_constant_override("outline_size",6);toast_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;toast_label.add_theme_font_size_override("font_size",18);toast_label.mouse_filter=Control.MOUSE_FILTER_IGNORE;canvas_layer.add_child(toast_label)
 	for sound in ["swing","impact","magic","coin","step","blade_heavy","shield","boss_slam","chest"]: sounds[sound]=load("res://assets/%s.wav"%sound)
 	for i in range(6):
 		var audio=AudioStreamPlayer.new();audio.volume_db=-12;add_child(audio);sfx_players.append(audio)
@@ -123,7 +123,7 @@ func panel(pos: Vector2, size: Vector2) -> Panel:
 func clear_ui() -> void:
 	for child in ui.get_children():child.queue_free();ui.remove_child(child)
 	controls.active=false;controls.clear();attack_held=false;keyboard_attack=false;move_axis=Vector2.ZERO
-	toast_label.text="";toast_timer=0
+	toast_label.text="";toast_label.position.y=116;toast_timer=0
 	interact_button=null
 	hud=null;expedition_status=null;boss_hud=null;health_bar=null;mana_bar=null
 	camera.zoom=Vector2.ONE;camera.position=Vector2(640,360)
@@ -290,7 +290,7 @@ func spawn_room() -> void:
 	save_run()
 
 func combat_ui() -> void:
-	clear_ui();screen="combat";controls.active=true
+	clear_ui();screen="combat";controls.active=true;controls.hero_kind=progress.d.hero;toast_label.position.y=207
 	if player!=null:
 		var stats=progress.hero_stats()
 		player.attack_power=stats.attack;player.defense=stats.defense
@@ -365,7 +365,7 @@ func player_strike(a: DFActor, action_name: String) -> void:
 	var weapon=db.item(progress.d.equipped.weapon)
 	var family=weapon.get("family","sword")
 	var ranged=family in ["staff","focus","bow"]
-	var damage=a.attack_power*(1.3 if a.combo==2 else 1.0)
+	var damage=a.attack_power*(1.3 if a.combo==2 and action_name=="basic" else 1.0)
 	var range_x=145.0 if family=="hammer" else 116.0
 	var depth=56.0
 	var color=Color("ffd179")
@@ -432,7 +432,7 @@ func enemy_strike(a: DFActor) -> void:
 		var depth=70.0 if a.boss else 45.0
 		world.fx(a.position+Vector2(a.facing*40,-12),reach*.5,Color(1,.35,.24),.28)
 		var diff: Vector2=player.position-a.position
-		if absf(diff.x)<reach and absf(diff.y)<depth and diff.x*a.facing>-20:
+		if absf(diff.x)<reach and absf(diff.y)<depth and diff.x*a.facing>-20 and not room_layout.segment_blocked(a.position,player.position):
 			player.hurt(a.attack_power*(1.25 if a.boss and a.hp<a.max_hp*.5 else 1.0),Vector2(a.facing*13,0),a.position)
 		if a.boss and a.hp<a.max_hp*.5:
 			world.fx(a.position,110,Color("ed7851"),.5)
