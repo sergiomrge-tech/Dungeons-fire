@@ -26,3 +26,15 @@ O workflow de validação captura o framebuffer real do Godot com Xvfb; o Androi
 Nenhum aparelho físico está disponível neste ambiente. FPS, aquecimento, latência do touchscreen e consumo no celular precisam de medição real. A coleta curta em emulador serve para diagnosticar travamentos, não comprovar 60 FPS em aparelhos. Novas prévias usam IDs próprios e não importam automaticamente o save da versão Android anterior.
 
 A direção visual foi preservada; estas mudanças não substituem a revisão visual e de sensação de combate pelo usuário.
+
+## Resultado final de CI — 15/10/2026
+
+Fonte executável validada: `b17576130a2ba0f9c9f3349f76ecd0690e325180`. Validação nativa + framebuffer: run `38740494653`, aprovada. Exportação + Android: run `38740494914`, job `116440625390`, aprovado.
+
+Android API 29/x86_64 com swangle: sete verificações iniciais, duas de pausa e sete de retomada, todas aprovadas. Capturas ADB mostram o jogo renderizado e a pausa após retomada. Logcat final sem SCRIPT ERROR, ERROR do Godot ou FATAL EXCEPTION. O teste reiniciou o processo e confirmou sala 3, vida 73, uma poção, baú aberto e saque 30 ouro/4 minério. Os três contatos são eventos sintéticos, não toque físico.
+
+Coleta diagnóstica curta: 38 frames em aproximadamente cinco segundos, média 7,49 FPS, pior frame 150 ms e memória estática 32.944.806 bytes no emulador por software. Este resultado não é benchmark do celular; a meta de 60 FPS em aparelhos não foi comprovada.
+
+APK arm64 entregue: versão 0.5.0, código 500, pacote `com.sergiomrge.dungeonsfires.preview.v050`. CRC, assinatura e alinhamento de 16 KB aprovados; recursos da Mina e dos chefes presentes, ferramentas/testes/masters/chaves ausentes. SHA256: `fca94bac55cc9e832793fedaf14810257f4146e06620781c77ca8cd464b615c3`.
+
+A prévia usa identidade Android própria e instala ao lado das versões anteriores, sem importar automaticamente seus saves. O save Godot mantém compatibilidade dentro do mesmo armazenamento.
