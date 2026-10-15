@@ -73,3 +73,16 @@ jobs:
         with:
           name: Dungeons-Fires-real-framebuffer-v030
           path: /tmp/dungeons-fires-visuals/*.png
+
+      - name: Render three isolated hub layout options
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          set -o pipefail
+          xvfb-run -a -s '-screen 0 1280x720x24' Godot_v4.6.1-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --script tests/capture_layout_options.gd -- --qa --capture-dir=/tmp/dungeons-layout-options 2>&1 | tee /tmp/df-layout-options.log
+          if grep -E 'SCRIPT ERROR|ERROR:' /tmp/df-layout-options.log; then exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dungeons-Fires-three-layout-options
+          path: /tmp/dungeons-layout-options/*.png
+          if-no-files-found: error
