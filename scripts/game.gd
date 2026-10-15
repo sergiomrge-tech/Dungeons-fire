@@ -276,14 +276,15 @@ func show_contracts(index: int) -> void:
 	var choices=[
 		["","Sem contrato","Expedição normal, sem modificadores."],
 		["flame_oath","Juramento sem poções","Não use poções. Recompensa: +180 ouro, +12 minério."],
-		["champion_hunt","Caçada de campeões","Enfrente um campeão extra em cada sala comum; derrote 2. Recompensa: +260 ouro, +18 minério."],
+		["champion_hunt","Caçada de campeões","Derrote 2 campeões extras. Bônus: +260 ouro e +18 minério."],
 		["swift_path","Marcha acelerada","Conclua em até 7 minutos. Recompensa: +200 ouro, +15 minério." ]
 	]
 	for i in range(choices.size()):
 		var row=choices[i];var y=183+i*86
 		var text="%s%s\n%s"%["✓  " if str(progress.d.get("contract_selected",""))==str(row[0]) else "",row[1],row[2]]
-		button(text,Vector2(238,y),Vector2(804,72),func():select_contract(str(row[0]),index))
-	button("VOLTAR",Vector2(868,568),Vector2(300,55),func():show_preparation(index))
+		var choice=button(text,Vector2(238,y),Vector2(804,72),func():select_contract(str(row[0]),index))
+		choice.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;choice.clip_text=true
+	button("VOLTAR",Vector2(795,568),Vector2(247,55),func():show_preparation(index))
 
 func select_contract(id: String, index: int) -> void:
 	progress.d.contract_selected=id;progress.save();show_preparation(index)
@@ -308,10 +309,18 @@ func choose_hunt_route() -> void:
 func show_boon_draft() -> void:
 	clear_ui();screen="boon_draft";panel(Vector2(95,132),Vector2(1090,456));title("ESCOLHA UMA BÊNÇÃO DE EXPEDIÇÃO","Ela dura até o retorno ao refúgio. O pacto fortalece a próxima sala.")
 	if boon_offers.is_empty():boon_offers=boon_options()
-	var width=350.0;var gap=22.0;var total=width*boon_offers.size()+gap*maxi(0,boon_offers.size()-1);var start=(1280-total)/2
+	var width=340.0;var gap=24.0;var total=width*boon_offers.size()+gap*maxi(0,boon_offers.size()-1);var start=(1280-total)/2
 	for i in range(boon_offers.size()):
 		var id=str(boon_offers[i]);var boon=db.boon(id)
-		button("✦  %s\n\n%s"%[boon.name,boon.description],Vector2(start+i*(width+gap),272),Vector2(width,190),select_route_boon.bind(id))
+		var x=start+i*(width+gap)
+		var choice=button("",Vector2(x,223),Vector2(width,240),select_route_boon.bind(id))
+		choice.set_meta("boon_id",id)
+		choice.tooltip_text="%s — %s"%[boon.name,boon.description]
+		var heading=label("✦  %s"%boon.name,Vector2(x+16,266),Vector2(width-32,40),22)
+		heading.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+		var detail=label(str(boon.description),Vector2(x+20,329),Vector2(width-40,84),18)
+		detail.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		detail.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;detail.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
 	if project_built("scribe_table") and not boon_reroll_used:
 		button("REFAZER OFERTAS • 1 uso",Vector2(435,506),Vector2(410,55),reroll_boon_offers)
 	button("CANCELAR",Vector2(925,506),Vector2(250,55),show_route_choice)
@@ -790,8 +799,8 @@ func show_camp_projects() -> void:
 	for i in range(ids.size()):
 		var id=ids[i];var y=142+i*101;var built=project_built(id);var unlocked=progress.unlocked()>=unlocks[i]
 		var resident=""
-		if i<progress.d.get("camp_survivors",[]).size():resident="  •  %s está no refúgio"%resident_names[i]
-		label("%s%s\n%s%s"%[names[i],"  •  CONSTRUÍDO" if built else "",desc[i],resident],Vector2(117,y),Vector2(700,82),18)
+		if i<progress.d.get("camp_survivors",[]).size():resident="\n%s está no refúgio"%resident_names[i]
+		label("%s%s\n%s%s"%[names[i],"  •  CONSTRUÍDO" if built else "",desc[i],resident],Vector2(117,y),Vector2(720,84),18)
 		var action_text="CONSTRUÍDO" if built else ("DESBLOQUEIA EM %d VITÓRIAS"%unlocks[i] if not unlocked else "%d ouro / %d minério\nCONSTRUIR"%[gold[i],ore[i]])
 		button(action_text,Vector2(858,y+3),Vector2(286,68),build_camp_project.bind(id),built or not unlocked)
 	var survivors=progress.d.get("camp_survivors",[])

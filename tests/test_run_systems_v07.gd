@@ -87,5 +87,13 @@ func run() -> void:
 	game.progress=camp;game.progress.d.contract_selected="";game.start_dungeon(0)
 	check(game.potions==3 and game.player.max_hp>game.progress.hero_stats().hp,"camp projects grant supply and health bonuses")
 	game.show_camp_projects();check(game.screen=="camp_projects" and game.ui.get_children().any(func(n):return n is Label and n.text.contains("Sobreviventes acolhidos: Tomas")),"camp project screen shows rescued residents")
+	var resident_rows=game.ui.get_children().filter(func(n):return n is Label and n.text.contains("está no refúgio"))
+	check(resident_rows.size()==mini(4,game.progress.d.camp_survivors.size()) and resident_rows.all(func(n):return n.text.contains("\n")),"camp residents have their own readable line")
+	game.show_contracts(0)
+	var contract_buttons=game.ui.get_children().filter(func(n):return n is Button)
+	check(contract_buttons.size()==5 and contract_buttons.all(func(n):return n.position.x>=180 and n.position.x+n.size.x<=1100),"contract actions fit their panel")
+	game.boon_offers=["long_breath","hunter_sigil","soul_siphon"];game.show_boon_draft()
+	var boon_cards=game.ui.get_children().filter(func(n):return n is Button and n.has_meta("boon_id"))
+	check(boon_cards.size()==3 and boon_cards.all(func(n):return n.size.x==340 and n.position.x>=95 and n.position.x+n.size.x<=1185),"boon cards fit inside the panel")
 	var report={"suite":"run_systems_v07","checks":checks,"failures":failures,"new_mobs":5,"boons":8,"contracts":3,"camp_projects":4}
 	print(JSON.stringify(report));game.queue_free();await process_frame;quit(0 if failures.is_empty() else 1)
