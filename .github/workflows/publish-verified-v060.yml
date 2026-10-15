@@ -1,0 +1,40 @@
+name: Publish verified Android v0.6.0
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/publish-verified-v060.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-tested-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Retrieve exact tested APK and verify provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/$GITHUB_REPOSITORY/actions/runs/38744737248 --jq '.head_sha + " " + .conclusion')" = '0027279d54e7de156be780119236797057213fa8 success'
+          mkdir -p /tmp/preview
+          gh run download 38744737248 --repo "$GITHUB_REPOSITORY" --name Dungeons-Fires-Android-v060-preview --dir /tmp/preview
+          cd /tmp/preview
+          sha256sum -c sha256.txt
+          echo 'a6ad41ea75dd45fec66d3e7c9de6ac8557970118223cfe1d963e4251a826230a  Dungeons_Fires_v0_6_0_Android.apk' | sha256sum -c -
+          unzip -t Dungeons_Fires_v0_6_0_Android.apk | tail -n 2
+      - name: Publish tested preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > /tmp/release-notes.txt <<'NOTES'
+          Combate refinado com preparação, contato e recuperação, recuo nos acertos, partículas com movimento e luzes locais. Varek dourado, Maela azul-violeta e Neris verde; rastros distintos de flechas e energia, escudo com faíscas e impactos de chefe com poeira/detritos. Pool de 240 partículas, seis luzes sem sombras e 36 efeitos. Capturas e animações reais do Godot revisadas; 58 verificações novas aprovadas.
+
+          Preservados o acampamento, o mapa visível e o layout clássico aprovados. Testes de campanha/primeira região, interface e combate nativos aprovados. APK assinado, CRC e alinhamento de 16 KB verificados. Runtime Android API 29/x86_64 aprovado com três contatos sintéticos, zoom, HOME, encerramento/reabertura e preservação de vida, poções, saque e baú. Framebuffer revisado; logcat sem erros do jogo. Não medido em aparelho físico; 60 FPS no celular continua sendo meta.
+
+          Instala como com.sergiomrge.dungeonsfires.preview.v060 ao lado das prévias anteriores. O save das outras prévias não é importado automaticamente.
+          NOTES
+          cd /tmp/preview
+          gh release create v0.6.0-preview Dungeons_Fires_v0_6_0_Android.apk sha256.txt --repo "$GITHUB_REPOSITORY" --target 0027279d54e7de156be780119236797057213fa8 --title 'Dungeons Fires v0.6.0 — Partículas e luz no combate' --notes-file /tmp/release-notes.txt --prerelease --latest=false
