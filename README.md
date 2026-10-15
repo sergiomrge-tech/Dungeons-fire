@@ -4,7 +4,7 @@ Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-f
 
 ## Interface clássica v0.4 — opção 1 aprovada
 
-Madeira escura, bronze e texto marfim compõem o layout escolhido por Sergio. O refúgio usa barra inferior com ícones e acesso central à exploração; o retrato, nível, experiência e recursos leem os dados reais do save. Melhorias do refúgio, menu, história e retomada continuam acessíveis. O tema é aplicado também às telas de mapa, mochila, forja, heróis e combate, mantendo posições e funcionamento dos controles touch. O módulo de produção `scripts/classic_ui.gd` não depende de ferramentas ou cenas de teste. Esta alteração é do projeto Godot; o APK v0.3.1 já entregue é anterior ao novo acampamento e à interface clássica.
+Madeira escura, bronze e texto marfim compõem o layout escolhido por Sergio. O refúgio usa barra inferior com ícones e acesso central à exploração; o retrato, nível, experiência e recursos leem os dados reais do save. A composição do hub segue a opção 1: melhorias do refúgio pela fogueira, menu pelo retrato, história pelo diário e retomada quando há expedição salva. O mapa preserva o cenário visível, com três marcos de masmorras e detalhes concentrados na faixa inferior. O tema é aplicado também às telas de mapa, mochila, forja, heróis e combate, mantendo posições e funcionamento dos controles touch. O módulo de produção `scripts/classic_ui.gd` não depende de ferramentas ou cenas de teste. Esta alteração é do projeto Godot; o APK v0.3.1 já entregue é anterior ao novo acampamento e à interface clássica.
 
 ## Refúgio como acampamento
 

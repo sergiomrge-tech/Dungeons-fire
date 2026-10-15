@@ -58,6 +58,17 @@ class Symbol extends Control:
 	func _box() -> StyleBoxFlat:
 		var b=StyleBoxFlat.new();b.bg_color=Color.TRANSPARENT;b.border_color=color;b.set_border_width_all(2);b.set_corner_radius_all(3);return b
 
+class ExpeditionRoute extends Control:
+	func _draw() -> void:
+		var points=[Vector2(240,338),Vector2(640,298),Vector2(1040,348)]
+		for i in range(2):
+			var a: Vector2=points[i];var b: Vector2=points[i+1]
+			for step in range(22):
+				var t=(step+.5)/22.0
+				var pos=a.lerp(b,t)+Vector2(0,sin(t*PI)*24)
+				draw_circle(pos,3.7,Color(.12,.10,.07,.8),true,-1,true)
+				draw_circle(pos,1.8,Color("dfc48b"),true,-1,true)
+
 class Trim extends Control:
 	var color = Color("c8aa68")
 	var wood = false
@@ -133,6 +144,8 @@ func portrait_panel(pos: Vector2, dimensions: Vector2) -> void:
 	var required=100+25*level+5*level*level
 	var bar=game.meter(pos+Vector2(85,73),Vector2(dimensions.x-102,5),edge)
 	bar.name="HubXP";bar.max_value=required;bar.value=hero.xp
+	var xp_background=StyleBoxFlat.new();xp_background.bg_color=Color("d6deea");xp_background.border_color=Color("8ea2bb");xp_background.set_border_width_all(1);xp_background.set_corner_radius_all(4)
+	bar.add_theme_stylebox_override("background",xp_background)
 	if int(hero.level)>=30:bar.value=required
 	bar.tooltip_text="Experiência: %d / %d"%[int(hero.xp),required]
 
@@ -176,8 +189,56 @@ func build() -> void:
 		var w=264.0 if i==3 else 148.0
 		action(labels[i],symbols[i],Vector2(x,620),Vector2(w,68),callbacks[i],i==3,true);x+=w+8
 
-	action("REFÚGIO","fire",Vector2(24,132),Vector2(178,48),game.show_buildings)
-	action("MENU","menu",Vector2(1100,112),Vector2(156,48),game.show_menu)
+	# Keep the approved composition; the actual campfire and portrait stay interactive.
+	hotspot("HubFire",Vector2(585,264),Vector2(140,98),"Aprimorar o refúgio",game.show_buildings)
+	hotspot("HubMenu",Vector2(24,22),Vector2(280,94),"Abrir menu",game.show_menu)
 	if not game.progress.d.run.is_empty():
 		var resume=action("RETOMAR EXPEDIÇÃO","map",Vector2(490,536),Vector2(300,52),game.resume_run,true)
 		resume.name="HubResume"
+
+func hotspot(id: String, pos: Vector2, dimensions: Vector2, hint: String, callback: Callable) -> void:
+	var b=Button.new();b.name=id;b.position=pos;b.size=dimensions;b.tooltip_text=hint
+	for state in ["normal","hover","pressed"]:b.add_theme_stylebox_override(state,StyleBoxEmpty.new())
+	var focus=box_style(Color.TRANSPARENT,edge,7);focus.shadow_size=0;b.add_theme_stylebox_override("focus",focus)
+	b.mouse_default_cursor_shape=Control.CURSOR_POINTING_HAND;b.pressed.connect(callback);game.ui.add_child(b)
+
+func build_map(region: int, selected: int) -> void:
+	panel_at(Vector2(24,24),Vector2(915,64),surface,edge,true)
+	txt("MAPA DE EDRAVA",Vector2(42,30),Vector2(875,31),25,ink)
+	txt("%d / 15 expedições concluídas  •  Toque em um marco para escolher"%game.progress.d.cleared.size(),Vector2(43,62),Vector2(875,20),14,ink.darkened(.12))
+	resources_at(Vector2(972,24))
+	action("REFÚGIO","fire",Vector2(24,109),Vector2(180,48),game.show_hub)
+	for r in range(5):
+		var tab=game.button("%d • %s"%[r+1,game.db.regions[r].split(" ")[0]],Vector2(226+r*206,109),Vector2(198,48),func():game.show_map(r))
+		tab.name="MapRegion%d"%r;tab.add_theme_font_size_override("font_size",17)
+		var bg=Color("86522c") if r==region else Color(.20,.155,.12,.87)
+		tab.add_theme_stylebox_override("normal",box_style(bg,edge,8))
+	var route=ExpeditionRoute.new();route.mouse_filter=Control.MOUSE_FILTER_IGNORE;game.ui.add_child(route)
+	var positions=[Vector2(240,338),Vector2(640,298),Vector2(1040,348)]
+	for local in range(3):
+		var index=region*3+local;var def=game.db.dungeons[index];var pos: Vector2=positions[local]
+		var unlocked=index<=game.progress.unlocked();var completed=game.progress.d.cleared.has(index)
+		var marker=Button.new();marker.name="MapDungeon%d"%index;marker.position=pos-Vector2(42,42);marker.size=Vector2(84,84)
+		marker.text="%02d"%(index+1);marker.add_theme_font_size_override("font_size",27)
+		var border=Color("ffe0a1") if index==selected else (Color("a3cc94") if completed else edge)
+		var fill=Color(.39,.25,.13,.95) if index==selected else Color(.15,.13,.10,.86)
+		marker.add_theme_stylebox_override("normal",box_style(fill,border,42))
+		marker.add_theme_stylebox_override("hover",box_style(fill.lightened(.13),ink,42))
+		marker.add_theme_stylebox_override("pressed",box_style(fill.darkened(.12),ink,42))
+		marker.add_theme_color_override("font_color",ink if unlocked else Color("c1b59d"))
+		marker.pressed.connect(func():game.show_map(region,index));game.ui.add_child(marker)
+		var label=txt(def.name,pos+Vector2(-165,49),Vector2(330,57),19,ink,true)
+		label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;label.add_theme_color_override("font_outline_color",Color("1a1c16"));label.add_theme_constant_override("outline_size",7)
+		var status="CONCLUÍDA" if completed else ("DISPONÍVEL" if unlocked else "BLOQUEADA")
+		var state_label=txt(status,pos+Vector2(-160,105),Vector2(320,23),13,Color("c1e4a9") if completed else ink,true)
+		state_label.add_theme_color_override("font_outline_color",Color("1a1c16"));state_label.add_theme_constant_override("outline_size",6)
+	var selected_def=game.db.dungeons[selected]
+	panel_at(Vector2(24,548),Vector2(1232,146),Color(.20,.155,.12,.93),edge,true)
+	txt(selected_def.name,Vector2(45,563),Vector2(875,34),25,ink)
+	txt("5 salas  •  Nível sugerido %d  •  %d ouro + %d minério"%[selected_def.level,selected_def.reward_gold,selected_def.reward_ore],Vector2(46,605),Vector2(865,26),18,ink)
+	var can_enter=selected<=game.progress.unlocked()
+	var message="Guardião regional • Material exclusivo de fabricação" if selected_def.guardian else "Expedição de campanha"
+	if not can_enter:message="Conclua a masmorra anterior para desbloquear esta expedição."
+	txt(message,Vector2(46,647),Vector2(865,24),16,Color("d2c09d"))
+	var prepare=action("PREPARAR" if can_enter else "BLOQUEADA","map",Vector2(950,589),Vector2(282,66),func():game.show_preparation(selected),true)
+	prepare.name="MapPrepare";prepare.disabled=not can_enter

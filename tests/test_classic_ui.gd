@@ -21,6 +21,17 @@ func run() -> void:
 		game.show_hub();await process_frame
 		game.ui.get_node(entry[0]).pressed.emit();await process_frame
 		assert(game.screen==entry[1],"Hub navigation: "+entry[0])
+	game.show_map(0);await process_frame
+	assert(game.ui.has_node("MapDungeon0") and game.ui.has_node("MapDungeon1") and game.ui.has_node("MapDungeon2"))
+	assert(not game.ui.get_node("MapPrepare").disabled,"First expedition is available")
+	for control in game.ui.get_children():
+		if control is Panel:assert(control.size.y<=146,"No full-screen opaque panel over the scenery")
+	game.ui.get_node("MapDungeon2").pressed.emit();await process_frame
+	assert(game.selected_map_dungeon==2 and game.ui.get_node("MapPrepare").disabled,"Locked marker can be inspected without entering")
+	game.show_map(4);await process_frame
+	assert(game.ui.has_node("MapDungeon12") and game.ui.has_node("MapDungeon14"),"Region markers follow actual dungeon IDs")
+	game.show_map(0,0);game.ui.get_node("MapPrepare").pressed.emit();await process_frame
+	assert(game.screen=="prepare" and game.dungeon==0,"Marker selection leads to real preparation")
 	game.show_journal()
 	var history=game.ui.get_children().filter(func(n):return n is Button and n.text=="HISTÓRIA")
 	assert(history.size()==1);history[0].pressed.emit();assert(game.screen=="lore")

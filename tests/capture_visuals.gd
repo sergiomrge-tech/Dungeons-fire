@@ -29,6 +29,8 @@ func run() -> void:
 	game.show_hub();await capture("02_hub")
 	game.show_heroes();await capture("03_heroes")
 	game.show_map(0);await capture("04_map")
+	game.show_map(1);await capture("04_map_region_1")
+	game.show_map(2);await capture("04_map_region_2")
 	for region in range(5):
 		game.start_dungeon(region*3)
 		await capture("05_combat_region_%d"%region)

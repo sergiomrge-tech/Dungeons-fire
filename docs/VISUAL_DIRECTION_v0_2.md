@@ -37,3 +37,7 @@ Sergio aprovou a direção visual da v0.3.1. Preservar o estilo dos personagens,
 ## Opção 1 aprovada — interface clássica v0.4
 
 Em 15/10/2026, Sergio escolheu a opção 1: madeira, bronze, texto marfim e barra inferior. `scripts/classic_ui.gd` integra essa apresentação ao hub real, com dados persistentes, botões funcionais e atalhos para melhorias/menu/retomada. Os demais menus e controles de combate seguem a mesma paleta. Preservar a aparência do acampamento e dos personagens. Protótipos das opções 2 e 3 ficam na branch de design, sem substituir a opção aprovada.
+
+## Correção de fidelidade e visibilidade do mapa
+
+O feedback de Sergio rejeitou a cobertura excessiva do mapa por madeira opaca. Retirar o painel de tela inteira e os três cartões grandes: usar marcos pequenos sobre o cenário e um resumo inferior de 146 px. O hub volta à composição da opção 1, sem os dois botões adicionais que cobriam as barracas. Fogueira e retrato continuam interativos para manter os acessos às melhorias e ao menu.

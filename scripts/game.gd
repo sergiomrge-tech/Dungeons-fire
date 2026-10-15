@@ -47,6 +47,7 @@ var music: AudioStreamPlayer
 var game_theme: Theme
 var qa_mode: bool = false
 var current_map_region: int = 0
+var selected_map_dungeon: int = 0
 var guard_charge: float = 0
 var resource_cd: float = 0
 
@@ -200,26 +201,11 @@ func show_journal() -> void:
 	button("HISTÓRIA",Vector2(490,606),Vector2(280,53),func():show_lore(true))
 	button("VOLTAR AO REFÚGIO",Vector2(794,606),Vector2(368,53),show_hub)
 
-func show_map(region: int = 0) -> void:
+func show_map(region: int = 0, selected: int = -1) -> void:
 	clear_ui();screen="map";current_map_region=clampi(region,0,4);world.change_theme(current_map_region)
-	panel(Vector2(25,20),Vector2(1230,677));title("MAPA DE EDRAVA","%d/15 expedições concluídas • Cada vitória abre o próximo caminho."%progress.d.cleared.size())
-	for r in range(5):
-		button("%d • %s" %[r+1,db.regions[r].split(" ")[0]],Vector2(52+r*240,124),Vector2(223,55),func():show_map(r),false)
-	label(db.regions[current_map_region],Vector2(57,204),Vector2(1100,40),29,Color("efd39b"))
-	for local in range(3):
-		var index=current_map_region*3+local
-		var def=db.dungeons[index]
-		var pos=Vector2(54+local*399,273)
-		panel(pos,Vector2(377,278))
-		label("%02d   %s" %[index+1,"GUARDIÃO" if def.guardian else "EXPEDIÇÃO"],pos+Vector2(16,18),Vector2(345,26),18,Color("d3b37a"))
-		var name=label(def.name,pos+Vector2(16,57),Vector2(345,72),23);name.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-		label("5 salas • Nível sugerido %d"%def.level,pos+Vector2(16,137),Vector2(344,30),17)
-		label("%d ouro + %d minério"%[def.reward_gold,def.reward_ore],pos+Vector2(16,174),Vector2(344,26),17)
-		var unlocked=index<=progress.unlocked()
-		var completed=progress.d.cleared.has(index)
-		button("REPETIR" if completed else ("PREPARAR" if unlocked else "BLOQUEADA"),pos+Vector2(16,213),Vector2(344,48),func():show_preparation(index),not unlocked)
-	label("A próxima masmorra exige concluir a anterior. Chefes fornecem materiais de relíquias.",Vector2(58,574),Vector2(1120,38),18)
-	button("VOLTAR AO REFÚGIO",Vector2(58,629),Vector2(380,50),show_hub)
+	var first=current_map_region*3
+	selected_map_dungeon=clampi(progress.unlocked() if selected<0 else selected,first,first+2)
+	classic_ui.build_map(current_map_region,selected_map_dungeon)
 
 func show_preparation(index: int) -> void:
 	clear_ui();screen="prepare";dungeon=index;world.change_theme(int(db.dungeons[index].region))
