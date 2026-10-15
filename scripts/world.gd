@@ -18,7 +18,7 @@ func _ready() -> void:
 
 func change_theme(index: int) -> void:
 	theme_index=index
-	background=load("res://assets/painted_worlds/world_%d.webp" % index)
+	background=load("res://assets/painted_worlds/hub_camp.webp") if index == 5 else load("res://assets/painted_worlds/world_%d.webp" % index)
 	queue_redraw()
 	if overlay!=null:overlay.queue_redraw()
 
@@ -60,6 +60,7 @@ func _draw() -> void:
 		var color: Color = colors[theme_index]; color.a = .22 + .2 * sin(clock+i)
 		draw_circle(Vector2(x,y),1.7 if theme_index==2 else 1.2,color)
 	if theme_index == 5 and game != null and game.progress != null and game.screen in ["menu","hub","journal"]:
+		draw_campfire()
 		draw_hub_recovery()
 	if theme_index == 1:
 		for i in range(8):
@@ -68,6 +69,18 @@ func _draw() -> void:
 	if game.screen == "combat":
 		for i in range(12):
 			draw_rect(Rect2(0,600+i*10,1280,10),Color(.12,.18,.28,i*.011))
+# Small bounded glow/embers sit directly over the painted campfire.
+func draw_campfire() -> void:
+	var center = Vector2(655,319)
+	var pulse = .5 + .5*sin(clock*4.2)
+	draw_set_transform(center,0,Vector2(1,.55))
+	draw_circle(Vector2.ZERO,48+pulse*5,Color(1,.63,.20,.045+pulse*.025))
+	draw_set_transform(Vector2.ZERO)
+	for i in range(9):
+		var phase = fposmod(clock*.30+i/9.0,1.0)
+		var p = center+Vector2(sin(clock*1.3+i*2.7)*(5+phase*14),-10-phase*78)
+		draw_circle(p,1.1*(1-phase)+.35,Color(1,.73,.29,(1-phase)*.65))
+
 # Decorative restoration grows from actual campaign and workshop progression.
 # These ambient cues never alter collisions or consume gameplay resources.
 func draw_hub_recovery() -> void:
@@ -75,7 +88,7 @@ func draw_hub_recovery() -> void:
 	var restored: int = 0
 	for key in ["forge","sanctuary","botica","archive","barracks"]:
 		restored += maxi(0,int(game.progress.d.hub[key])-1)
-	var lights: Array[Vector2] = [Vector2(286,343),Vector2(621,313),Vector2(934,349),Vector2(1113,338)]
+	var lights: Array[Vector2] = [Vector2(430,229),Vector2(943,243),Vector2(104,247),Vector2(1003,262)]
 	var count: int = mini(lights.size(),1 + victories/3 + restored/2)
 	for i in range(count):
 		var pos: Vector2 = lights[i]
@@ -88,8 +101,9 @@ func draw_hub_recovery() -> void:
 			draw_circle(pos+drift,1.0,Color(1,.84,.59,.16+pulse*.15))
 	if victories >= 3:
 		var banners: int = mini(8,3+victories/3+restored)
+		draw_line(Vector2(430,229),Vector2(943,243),Color("65513c"),1.5)
 		for i in range(banners):
-			var anchor: Vector2 = Vector2(445+i*44,234+sin(i*.5)*10)
+			var anchor: Vector2 = Vector2(460+i*61,230+(i*61+30)*14/513.0)
 			var fabric: Color = Color("c85f5c") if i%2==0 else Color("e7c77d")
 			fabric.a = .83
 			draw_colored_polygon(PackedVector2Array([anchor,anchor+Vector2(12,1),anchor+Vector2(6,19+sin(clock*1.6+i)*2)]),fabric)

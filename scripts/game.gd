@@ -161,7 +161,7 @@ func relic_effect() -> String:
 
 func show_hub() -> void:
 	clear_ui();clear_actors();screen="hub";hero_dead=false;world.change_theme(5)
-	title("REFÚGIO DA ÚLTIMA CHAMA",resources())
+	title("ACAMPAMENTO DA ÚLTIMA CHAMA",resources())
 	spawn_actor(progress.d.hero,Vector2(635,488),true,progress.hero_stats().hp,progress.hero_stats().attack)
 	spawn_actor("knight",Vector2(289,473),false,100,0)
 	spawn_actor("maela",Vector2(997,488),false,100,0)

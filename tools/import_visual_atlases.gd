@@ -16,9 +16,12 @@ func _initialize() -> void:
 		var tile = worlds.get_region(Rect2i(x, edges[row], 682, edges[row + 1] - edges[row]))
 		tile.resize(1280, 720, Image.INTERPOLATE_LANCZOS)
 		assert(tile.save_webp("res://assets/painted_worlds/world_%d.webp" % index, false, .92) == OK)
+	var camp = Image.load_from_file("res://art_sources/hub_camp_v1.png")
+	camp.resize(1280, 720, Image.INTERPOLATE_LANCZOS)
+	assert(camp.save_webp("res://assets/painted_worlds/hub_camp.webp", false, .92) == OK)
 	slice_actors("res://art_sources/heroes_atlas.png", HEROES, HERO_EDGES)
 	slice_actors("res://art_sources/enemies_atlas.png", ENEMIES, ENEMY_EDGES)
-	print("VISUAL ATLAS IMPORT: 6 worlds, 14 animated characters, 112 authored frames")
+	print("VISUAL ATLAS IMPORT: 6 worlds + forest campsite, 14 animated characters, 112 authored frames")
 	quit()
 
 func slice_actors(path: String, names: Array, edges: Array) -> void:

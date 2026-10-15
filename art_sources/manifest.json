@@ -16,6 +16,11 @@
       "file": "enemies_atlas.png",
       "sha256": "c25544fd452535dd101669ff0b783b80f1252edf267a72945204d74a0a6db863",
       "production_prompt_specification": "Transparent production sprite atlas: 8 columns x 8 rows; ash knight, rogue archer, cave brute, Garron mine guardian, Sereia water mage, frost king, terracotta colossus and Severan archive mage. Same 8 pose columns as heroes, original designs, clean readable silhouettes and consistent scale, no text or scenery."
+    },
+    {
+      "file": "hub_camp_v1.png",
+      "sha256": "8150e59d712016f2f27bd8c393022b1ae41df3f3f593cca4b83a6ab156444914",
+      "production_prompt_specification": "Original production background in the approved colorful anime fantasy style: small forest campsite, central stone-ring wood campfire, two rustic canvas tents, dense woodland behind, clear dirt clearing for hero/NPCs and mobile UI. No buildings, no characters, no UI. Built-in ImageGen with previous hub used only as an art-style reference."
     }
   ],
   "constraints": [

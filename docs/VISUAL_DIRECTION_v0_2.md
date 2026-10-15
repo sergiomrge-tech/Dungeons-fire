@@ -29,3 +29,7 @@ O APK em `builds/` continua sendo a v0.1.0. A v0.2 é uma atualização do proje
 ## Revisão sobre v0.3
 
 Capturas reais do Godot identificaram retratos que excediam o painel, barras com altura mínima incorreta e recortes de sprites com partes de linhas vizinhas. O importador agora usa limites por coluna, preserva a proporção com escala comum por personagem e alinha os pés. O HUD aplica o tamanho após configurar a expansão e atualiza o contador de poções. Barras de inimigos ficam restritas ao combate, sem aparecer nos NPCs da vila. A revisão preserva o diário, a recuperação do refúgio e os efeitos da v0.3.
+
+## Refúgio aprovado como acampamento — 15/10/2026
+
+Sergio aprovou a direção visual da v0.3.1. Preservar o estilo dos personagens, cenários e interface. Sua alteração específica para o hub substitui a cidade por acampamento com fogueira central, barracas e floresta atrás. O novo master original é `art_sources/hub_camp_v1.png`, convertido pelo importador para `assets/painted_worlds/hub_camp.webp`. Esse asset é usado no tema 5: menu, hub e diário. Os sistemas e saves continuam iguais. Lanternas, brasas e bandeirolas ficam ancoradas nos elementos do acampamento.

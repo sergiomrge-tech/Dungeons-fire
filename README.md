@@ -2,6 +2,10 @@
 
 Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-fire. Abra o `project.godot` na raiz deste repositório.
 
+## Refúgio como acampamento
+
+A pedido de Sergio, o refúgio agora é uma clareira na floresta, com fogueira central e barracas. A direção fantasia anime aprovada, os heróis e a interface permanecem como referência visual. A fogueira recebe brilho e pequenas brasas animadas; a recuperação do refúgio acende as lanternas das barracas e acrescenta detalhes ao acampamento. O APK v0.3.1 já entregue é anterior a esta alteração.
+
 ## Avanço v0.3 — Refúgio vivo e legibilidade do combate
 
 - Refúgio começa a recuperar pontos de luz, bandeirolas e vegetação conforme conquistas da campanha e melhorias das oficinas. São sobreposições leves, sem alterar colisão ou saves antigos.
