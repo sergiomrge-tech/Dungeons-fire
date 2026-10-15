@@ -1,7 +1,7 @@
 """Drive installed QA build through Android lifecycle; retain runtime evidence."""
 import json, subprocess, time, re
 from pathlib import Path
-pkg='com.sergiomrge.dungeonsfires.qa.v050'
+pkg='com.sergiomrge.dungeonsfires.qa.v060'
 out=Path('/tmp/android-runtime');out.mkdir(exist_ok=True)
 def adb(*args,check=True):
  return subprocess.run(['adb',*args],check=check,capture_output=True).stdout

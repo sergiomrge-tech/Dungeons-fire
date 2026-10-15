@@ -34,6 +34,8 @@ var boss_profile: Dictionary = {}
 var elite: bool = false
 var guard_age: float = 0
 var stagger_multiplier: float = 1
+var hit_flash: float = 0
+var recoil_offset: Vector2 = Vector2.ZERO
 var direction: Vector2 = Vector2.RIGHT
 var aim: Vector2 = Vector2.ZERO
 var id: int = 0
@@ -53,6 +55,7 @@ func start_action(name: String, action_type: String, seconds: float) -> void:
 	rush_hit=false
 	if name!="attack":pending_attack=false
 	state = name; attack_kind = action_type; duration = seconds; timer = seconds; swing_done = false
+	if game!=null and game.world!=null and game.world.vfx!=null:game.world.vfx.action_started(self,name,action_type,seconds)
 
 func request_attack() -> void:
 	if hp<=0: return
@@ -98,6 +101,8 @@ func request_supreme() -> void:
 
 func tick(delta: float) -> void:
 	anim_clock += delta
+	hit_flash=maxf(0,hit_flash-delta)
+	recoil_offset=recoil_offset.lerp(Vector2.ZERO,minf(1,delta*18))
 	combo_window=maxf(0,combo_window-delta)
 	if boss and kind=="garron" and boss_phase==1 and hp>0 and hp<=max_hp*.55:
 		boss_phase=2;boss_profile={};start_action("roar","roar",1.1);cooldown=1.2
@@ -182,7 +187,7 @@ func hurt(amount: float, push: Vector2 = Vector2.ZERO, source: Vector2 = Vector2
 	if hp<=0:return false
 	if invuln>0:return false
 	if is_player and state=="guard" and source!=Vector2.INF and (source.x-position.x)*facing>=-8:
-		game.play_sfx("shield");game.world.fx(position-Vector2(0,45),44,Color("ffe09a"),.25)
+		game.play_sfx("shield");game.world.vfx.parry(self)
 		if game.relic_effect()=="guard":game.guard_charge=5.0
 		if guard_age<=.20:
 			game.toast("Defesa perfeita!" if game.guard_charge<=0 else "Marca do Portão pronta • próximo golpe rompe a postura",1.3)
@@ -192,6 +197,8 @@ func hurt(amount: float, push: Vector2 = Vector2.ZERO, source: Vector2 = Vector2
 	if is_player and game.relic_effect()=="resist":received*=.9
 	if is_player and game.progress.d.settings.story_mode: received *= .6
 	hp = maxf(0,hp-received)
+	hit_flash=.10;recoil_offset=Vector2(push.x*.45,-3)
+	game.world.vfx.impact(self,source,received>max_hp*.15)
 	game.damage_text(position-Vector2(0,100),int(received),is_player)
 	game.play_sfx("impact")
 	position=game.move_actor(position,push)
@@ -224,8 +231,6 @@ func _draw() -> void:
 		var dust: Color = Color(.85,.81,.72,.22)
 		draw_circle(Vector2(-facing*18,-3),5.0*size_scale,dust)
 		draw_circle(Vector2(-facing*30,-6),3.0*size_scale,Color(.91,.85,.73,.13))
-	if state=="guard":
-		draw_arc(Vector2(facing*30,-48),35,-1.4 if facing>0 else 1.74,1.4 if facing>0 else 4.54,24,Color(1,.86,.52,.9),5,true)
 	if is_player and game.guard_charge>0:
 		draw_arc(Vector2(0,-56),62,0,TAU,36,Color(1,.77,.29,.55),2,true)
 	if elite:
@@ -235,32 +240,48 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO,60 if boss else 43,0,TAU,32,warn,4)
 		draw_line(Vector2.ZERO,(aim-position).normalized()*95,warn,4)
 	var frame = visual_frame()
-	var tint = Color.WHITE
-	if invuln>0 and state=="hurt": tint=Color(1,.6,.55)
+	var tint = Color(1.55,1.35,1.10) if hit_flash>0 else Color.WHITE
+	if invuln>0 and state=="hurt" and hit_flash<=0: tint=Color(1,.6,.55)
 	tint.a = fade
-	var bob = sin(anim_clock * 3.0) * .7
-	var lean = 0.0
-	if state == "run": bob = -absf(sin(anim_clock * 12.0)) * 2.0
-	if state == "dodge": lean = .27; bob = 8
-	if state == "attack":lean=sin((1-timer/maxf(duration,.01))*PI)*(.11 if combo<2 else .18)
-	if state == "hurt": lean = -.12
-	if state == "death": lean = (1.0 - fade) * PI / 2
-	draw_set_transform(Vector2(0, bob), lean * facing, Vector2(facing, 1))
+	var pose=pose_transform()
+	if state=="death":pose.rotation=(1.0-fade)*PI/2
+	draw_set_transform(pose.offset+recoil_offset,pose.rotation*facing,Vector2(facing*pose.scale.x,pose.scale.y))
 	if state=="dodge":
 		for ghost_index in range(3,0,-1):
 			var ghost_color: Color = Color(.79,.90,1.0,(4-ghost_index)*.085*fade)
 			draw_texture_rect_region(atlas,Rect2(-48*size_scale-ghost_index*direction.x*18,-90*size_scale-ghost_index*direction.y*10,96*size_scale,96*size_scale),Rect2(2*192,0,192,192),ghost_color)
 	draw_texture_rect_region(atlas, Rect2(-48*size_scale,-90*size_scale,96*size_scale,96*size_scale), Rect2(frame*192,0,192,192), tint)
-	if state=="attack" and timer<duration*.58 and timer>duration*.20:
-		var slash_color: Color = Color(.99,.87,.56,.33 if is_player else .24)
-		draw_arc(Vector2(24,-62*size_scale),39*size_scale,-1.42,1.05,24,slash_color,3.5)
-		if is_player:draw_arc(Vector2(24,-62*size_scale),45*size_scale,-1.23,.93,24,Color(.98,.97,.76,.23),1.8)
 	draw_set_transform(Vector2.ZERO)
 	if not is_player and hp>0 and game.screen=="combat":
 		var w = 85 if boss else 54
 		draw_rect(Rect2(-w/2.0-1,-96*size_scale-1,w+2,7),Color("304660"))
 		draw_rect(Rect2(-w/2.0,-96*size_scale,w,5),Color("e8eaf0"))
 		draw_rect(Rect2(-w/2.0,-96*size_scale,w*hp/max_hp,5),Color("ce5b70"))
+
+func pose_transform() -> Dictionary:
+	var offset=Vector2(0,sin(anim_clock*3)*.7)
+	var rotation=0.0
+	var scale=Vector2.ONE
+	var t=clampf(1-timer/maxf(duration,.001),0,1)
+	if state=="run":
+		offset.y=-absf(sin(anim_clock*12))*2
+		rotation=sin(anim_clock*12)*.012
+	elif state=="attack":
+		var winding=sin(clampf(t/.42,0,1)*PI/2)
+		var release=sin(clampf((t-.38)/.20,0,1)*PI/2)
+		var settle=1-pow(clampf((t-.58)/.42,0,1),.65)
+		var weight=1.0 if combo<2 else 1.45
+		offset.x=facing*((-3*winding+12*release)*settle)*weight
+		rotation=(-.055*winding+.13*release)*settle*weight
+		if combo==1:rotation*=-.7;offset.y=-sin(t*PI)*2.5
+		scale=Vector2(1+.018*release*settle,1-.012*release*settle)
+	elif state=="cast":
+		if kind=="varek":offset=Vector2(facing*sin(t*PI)*8,-sin(t*PI)*2);rotation=sin(t*PI)*.08
+		else:offset.y=-sin(t*PI)*4;rotation=-.035*sin(t*PI)
+	elif state=="guard":rotation=-.035;offset.x=-facing*2
+	elif state=="dodge":rotation=.22;offset.y=7
+	elif state=="hurt":rotation=-.10*minf(1,timer/.12)
+	return {"offset":offset,"rotation":rotation,"scale":scale}
 
 func visual_frame() -> int:
 	# Eight authored poses per character/weapon; timing follows actual hit windows.
@@ -270,7 +291,8 @@ func visual_frame() -> int:
 		"attack":
 			var t = 1.0 - timer / maxf(duration, .01)
 			return 4 if t < .42 else (5 if t < .72 else 6)
-		"cast","roar": return 7
+		"cast": return (4 if timer>duration*.55 else 5) if kind=="varek" else 7
+		"roar": return 7
 		"guard": return 4
 		"recover","hurt": return 6
 		"dodge": return [1, 2, 3][clampi(int((1.0-timer/maxf(duration,.01))*3),0,2)]

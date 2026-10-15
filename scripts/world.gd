@@ -13,14 +13,17 @@ var overlay: Node2D
 var props: Array = []
 var gate
 var chest_nodes: Dictionary = {}
+var vfx: DFCombatVFX
 
 func _ready() -> void:
 	font=load("res://assets/DejaVuSans.ttf")
 	overlay=Node2D.new();overlay.z_index=1000;add_child(overlay)
 	overlay.draw.connect(draw_effects)
+	vfx=DFCombatVFX.new();vfx.game=game;add_child(vfx)
 
 func change_theme(index: int) -> void:
 	clear_props()
+	if vfx!=null:vfx.reset()
 	theme_index=index
 	background=load("res://assets/painted_worlds/hub_camp.webp") if index == 5 else load("res://assets/painted_worlds/world_%d.webp" % index)
 	queue_redraw()
@@ -36,7 +39,7 @@ func make_prop(cell: int, pos: Vector2, size: Vector2 = Vector2(88,88)):
 	game.actors.add_child(node);props.append(node);return node
 
 func configure_room() -> void:
-	clear_props()
+	clear_props();vfx.reset()
 	var def: Dictionary=game.room_layout.definition
 	var path: String=def.get("background","")
 	background=load("res://assets/painted_worlds/%s"%path) if path!="" else load("res://assets/painted_worlds/world_%d.webp"%theme_index)
@@ -61,8 +64,11 @@ func tick(delta: float) -> void:
 	effects=effects.filter(func(e):return e.time>0)
 	for p in projectiles:
 		var old: Vector2=p.pos
+		p.trail.push_front(p.pos-Vector2(0,65))
+		if p.trail.size()>8:p.trail.pop_back()
 		p.time-=delta; p.pos+=p.velocity*delta
-		if game.room_layout.segment_blocked(old,p.pos):p.time=0;continue
+		if game.room_layout.segment_blocked(old,p.pos):
+			vfx.emit("impact",p.pos-Vector2(0,65),p.color,30,.18,1,0,.1);p.time=0;continue
 		if p.player:
 			for target in game.enemies:
 				if target.hp>0 and absf(target.position.y-p.pos.y)<24 and absf(target.position.x-p.pos.x)<30 and not p.hit.has(target.id):
@@ -74,11 +80,14 @@ func tick(delta: float) -> void:
 			if game.player!=null and game.player.hp>0 and game.player.position.distance_to(p.pos)<30:
 				game.player.hurt(p.damage,Vector2.ZERO,p.pos-p.velocity*.1);p.time=0
 	projectiles=projectiles.filter(func(p):return p.time>0 and p.pos.x>-100 and p.pos.x<1380)
+	vfx.tick(delta)
 	queue_redraw()
 	overlay.queue_redraw()
 
 func missile(pos: Vector2, velocity: Vector2, damage: float, player: bool, color: Color, piercing: bool = false) -> void:
-	projectiles.append({"pos":pos,"velocity":velocity,"damage":damage,"player":player,"time":3.0,"color":color,"hit":[],"piercing":piercing})
+	if projectiles.size()>=48:projectiles.pop_front()
+	var style="ember" if player and game.player!=null and game.player.kind=="maela" else "arrow"
+	projectiles.append({"style":style,"trail":[],"pos":pos,"velocity":velocity,"damage":damage,"player":player,"time":3.0,"color":color,"hit":[],"piercing":piercing})
 
 func fx(pos: Vector2, radius: float, color: Color, seconds: float = .4) -> void:
 	effects.append({"pos":pos,"radius":radius,"color":color,"time":seconds,"duration":seconds})
@@ -159,11 +168,6 @@ func draw_effects() -> void:
 		for i in range(9):
 			var a = i*TAU/9+clock*3
 			overlay.draw_circle(e.pos+Vector2(cos(a),sin(a)*.55)*e.radius*(1-alpha*.4),3,color)
-	for p in projectiles:
-		var facing = signf(p.velocity.x)
-		var visual_pos: Vector2=p.pos-Vector2(0,65)
-		overlay.draw_line(visual_pos-Vector2(facing*20,0),visual_pos+Vector2(facing*12,0),p.color,4)
-		overlay.draw_circle(visual_pos,5,p.color)
 	for n in numbers:
 		var color = Color(1,.41,.42,n.time) if n.player else Color(1,.96,.76,n.time)
 		overlay.draw_string_outline(font,n.pos,str(n.value),HORIZONTAL_ALIGNMENT_LEFT,-1,23,4,Color(.15,.19,.29,n.time))

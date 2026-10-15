@@ -130,7 +130,7 @@ func clear_ui() -> void:
 
 func clear_actors() -> void:
 	for a in actors.get_children():a.queue_free();actors.remove_child(a)
-	player=null;enemies.clear();world.projectiles.clear();world.effects.clear();world.numbers.clear()
+	player=null;enemies.clear();world.vfx.reset();world.projectiles.clear();world.effects.clear();world.numbers.clear()
 
 func title(text: String, subtitle: String = "") -> void:
 	panel(Vector2(28,20),Vector2(1224,76))
@@ -151,7 +151,7 @@ func show_menu() -> void:
 	button("RETOMAR EXPEDIÇÃO",Vector2(84,410),Vector2(458,55),resume_run,progress.d.run.is_empty())
 	button("HISTÓRIA",Vector2(84,482),Vector2(220,53),func():show_lore(false))
 	button("OPÇÕES",Vector2(320,482),Vector2(222,53),func():previous_screen="menu";show_settings())
-	label("v0.5.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("c5b795"))
+	label("v0.6.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("c5b795"))
 	var hero=spawn_actor(progress.d.hero,Vector2(870,550),true,180,28);hero.size_scale=2.7
 	label("Seu próximo capítulo começa aqui.",Vector2(710,590),Vector2(500,35),21,Color("ffffff"))
 
@@ -392,10 +392,10 @@ func player_strike(a: DFActor, action_name: String) -> void:
 				nearest=e;dist=e.position.distance_to(a.position)
 		var vel=Vector2(a.facing,0)
 		if nearest!=null:vel=(nearest.position-a.position).normalized()
-		world.missile(a.position,vel*620,damage,true,Color("ff9759") if a.kind=="maela" else Color("e7d8ad"),action_name=="skill0")
-		world.fx(a.position-Vector2(0,45),36,color,.23)
+		world.missile(a.position,vel*620,damage,true,Color("b3a3ff") if a.kind=="maela" else Color("70eeb8"),action_name=="skill0")
+		world.vfx.strike(a,action_name,range_x,true)
 		return
-	world.fx(a.position+Vector2(a.facing*70,-30),range_x*.48,color,.35)
+	world.vfx.strike(a,action_name,range_x,false)
 	for e in enemies:
 		if e.hp<=0:continue
 		var diff: Vector2=e.position-a.position
@@ -410,14 +410,15 @@ func player_strike(a: DFActor, action_name: String) -> void:
 				if action_name=="skill1" or relic_effect()=="slow":e.slowed=2.5
 
 	if landed:
-		hit_stop=.065 if a.combo==2 else .035
+		hit_stop=.085 if action_name=="supreme" else (.065 if a.combo==2 or action_name=="skill0" else .035)
+		if action_name!="basic" and progress.d.settings.shake:shake_timer=maxf(shake_timer,.16)
 		if charged:
 			guard_charge=0;world.fx(a.position-Vector2(0,40),95,Color("fff1a6"),.45);play_sfx("shield")
 
 func enemy_strike(a: DFActor) -> void:
 	if player.hp<=0:return
 	if not a.boss_profile.is_empty():
-		world.fx(a.position,90,Color("ff9955"),.35);play_sfx("boss_slam")
+		world.vfx.boss_strike(a);play_sfx("boss_slam")
 		if a.boss_profile.move!="rush" and DFBossPatterns.contains(a.boss_profile,player.position) and not room_layout.segment_blocked(a.boss_profile.origin,player.position):
 			player.hurt(a.attack_power*a.boss_profile.damage,Vector2(a.facing*18,0),a.boss_profile.origin)
 		return

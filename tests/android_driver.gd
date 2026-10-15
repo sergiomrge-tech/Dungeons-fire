@@ -52,6 +52,9 @@ func _ready() -> void:
 	game.progress.d.settings.zoom=1.3
 	await get_tree().process_frame
 	report.checks.zoom_and_bounds=is_equal_approx(game.camera.zoom.x,1.3) and game.camera.position.x>=640/1.3
+	game.player.state="idle";game.player.skill_cd[0]=0;game.player.request_skill(0)
+	report.checks.skill_light=game.world.vfx.effects.any(func(e):return e.kind=="charge")
+	report.checks.particles=game.world.vfx.live_particle_count()>0
 	measuring=true;await get_tree().create_timer(5).timeout;measuring=false
 	var total=0.0;var worst=0.0
 	for delta in frames:total+=delta;worst=maxf(worst,delta)

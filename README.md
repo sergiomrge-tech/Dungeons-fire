@@ -1,6 +1,12 @@
-# Dungeons Fires: As Cinco Brasas - v0.5.0
+# Dungeons Fires: As Cinco Brasas - v0.6.0
 
 Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-fire. Abra o `project.godot` na raiz deste repositório.
+
+## Combate e iluminação v0.6
+
+Animações com preparação, contato e recuperação, peso diferente nos três golpes e recuo curto nas reações. As oito poses autoradas por personagem e a identidade visual aprovada permanecem. Varek usa cortes e escudo dourados, Maela projéteis de energia azul-violeta e Neris flechas/rastros verdes. Os impactos são emitidos quando o dano é confirmado; a preparação não antecipa dano.
+
+`combat_vfx.gd` anima fitas de luz, fagulhas, ondas no chão, pilares de brasa e o escudo. Seis PointLight2D reutilizados iluminam cenário/atores/props, sem atingir a interface. Partículas têm velocidade, gravidade, arrasto, rotação e desaparecimento gradual: faíscas, brasas, fragmentos arcanos, folhas, poeira e detritos. Limites: 240 partículas em pool fixo, 36 efeitos simultâneos, 48 projéteis e oito pontos por rastro. Não depende de bloom ou flashes de tela inteira. As capturas e vídeos do CI vêm do framebuffer do Godot; uma comparação com luz ligada/desligada confirma mudança real dos pixels.
 
 ## Primeira região v0.5
 
