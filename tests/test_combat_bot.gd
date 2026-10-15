@@ -14,10 +14,12 @@ func run() -> void:
 		game.progress.d.heroes.varek.level=5;game.progress.equip("W_sword_1")
 	game.start_dungeon(index)
 	var ticks=0;var dodges=0;var skills=0
-	while game.screen=="combat" and ticks<18000:
+	while game.screen in ["combat","route_choice","boon_draft"] and ticks<18000:
 		ticks+=1
 		if game.cleared_room:
-			game.next_room()
+			if game.screen=="route_choice":game.choose_safe_route()
+			elif game.screen=="boon_draft" and not game.boon_offers.is_empty():game.select_route_boon(str(game.boon_offers[0]))
+			else:game.next_room()
 		var nearest: DFActor=null
 		var distance=INF
 		for a in game.enemies:

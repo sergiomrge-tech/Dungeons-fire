@@ -157,7 +157,9 @@ func update_lights() -> void:
 		var fade=pow(1.0-e.age/e.life,1.5)
 		if e.light*fade>.02:sources.append({"pos":e.pos,"color":e.color,"radius":maxf(85,e.radius*1.4),"energy":e.light*fade})
 	for p in game.world.projectiles:
-		if p.player and p.style=="ember":sources.append({"pos":p.pos-Vector2(0,65),"color":p.color,"radius":95.0,"energy":.18})
+		if p.style=="ember":sources.append({"pos":p.pos-Vector2(0,65),"color":p.color,"radius":95.0,"energy":.18})
+		elif p.style=="fireball":sources.append({"pos":p.pos-Vector2(0,65),"color":p.color,"radius":72.0,"energy":.14})
+		elif p.style=="spectral":sources.append({"pos":p.pos-Vector2(0,65),"color":p.color,"radius":58.0,"energy":.12})
 	sources.sort_custom(func(a,b):return a.energy>b.energy)
 	for i in range(lights.size()):
 		var lamp=lights[i];lamp.enabled=i<sources.size() and game.screen=="combat"
@@ -291,12 +293,16 @@ func draw_projectiles() -> void:
 		for i in range(p.trail.size()-1):
 			var opacity=(1-float(i)/maxi(1,p.trail.size()))*.55
 			ribbon(glow,PackedVector2Array([p.trail[i],p.trail[i+1]]),5 if p.style=="ember" else 2,p.color,opacity)
-		if p.style=="ember":
+		if p.style in ["ember","fireball"]:
 			halo(glow,pos,35 if not p.piercing else 49,p.color,.65)
 			glow.draw_set_transform(pos,p.velocity.angle(),Vector2.ONE)
 			var flame=PackedVector2Array([Vector2(-38,-10),Vector2(-20,-4),Vector2(-29,8),Vector2(8,11),Vector2(19,0),Vector2(5,-9)])
 			glow.draw_colored_polygon(flame,alpha(p.color,.85))
 			glow.draw_circle(Vector2(6,0),7,Color("fff1d9"));glow.draw_set_transform(Vector2.ZERO)
+		elif p.style=="spectral":
+			halo(glow,pos,25,p.color,.72,Vector2(1.0,.72))
+			glow.draw_circle(pos,8,Color("e8f7ff"))
+			glow.draw_arc(pos,13,game.world.clock*4,game.world.clock*4+PI*1.5,18,alpha(p.color,.9),2,true)
 		else:
 			glow.draw_line(pos-heading*28,pos+heading*13,alpha(p.color,.9),2.5,true)
 			var wing=heading.orthogonal()*5

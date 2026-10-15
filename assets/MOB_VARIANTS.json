@@ -1,0 +1,47 @@
+{
+  "ash_hound": {
+    "source": "brute.png",
+    "palette": "ember",
+    "frames": 8,
+    "frame_size": [
+      192,
+      192
+    ]
+  },
+  "bell_wraith": {
+    "source": "severan.png",
+    "palette": "spectral",
+    "frames": 8,
+    "frame_size": [
+      192,
+      192
+    ]
+  },
+  "bone_sentinel": {
+    "source": "knight.png",
+    "palette": "bone",
+    "frames": 8,
+    "frame_size": [
+      192,
+      192
+    ]
+  },
+  "cinder_acolyte": {
+    "source": "maela.png",
+    "palette": "cinder",
+    "frames": 8,
+    "frame_size": [
+      192,
+      192
+    ]
+  },
+  "glass_stalker": {
+    "source": "neris_daggers.png",
+    "palette": "amethyst-glass",
+    "frames": 8,
+    "frame_size": [
+      192,
+      192
+    ]
+  }
+}

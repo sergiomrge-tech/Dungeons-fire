@@ -32,7 +32,8 @@ for path in root.rglob('*'):
 for required in ['project.godot', 'scenes/main.tscn', 'scripts/game.gd', 'scripts/actor.gd',
                  'scripts/world.gd', 'scripts/progression.gd', 'scripts/content.gd',
                  'scripts/touch_controls.gd', 'data/catalog.json', 'assets/ART_LICENSE.md',
-                 'assets/FONT_LICENSE.txt', 'tests/test_game.gd', 'tests/test_combat_bot.gd']:
+                 'assets/FONT_LICENSE.txt', 'data/boons.json', 'data/mobs.json',
+                 'tests/test_game.gd', 'tests/test_combat_bot.gd', 'tests/test_run_systems_v07.gd']:
     if not (root / required).is_file():
         errors.append(f'Missing source: {required}')
 catalog = json.loads((root / 'data/catalog.json').read_text(encoding='utf-8'))
@@ -43,6 +44,20 @@ for actor in ['varek', 'maela', 'neris', 'knight', 'archer', 'brute', 'garron',
               'severan', 'sereia', 'colosso', 'rei', 'varek_hammer', 'maela_focus', 'neris_daggers']:
     if not (root / f'assets/{actor}.png').is_file():
         errors.append(f'Missing actor atlas {actor}')
+new_mobs = ['ash_hound', 'bell_wraith', 'bone_sentinel', 'cinder_acolyte', 'glass_stalker']
+for actor in new_mobs:
+    if not (root / f'assets/{actor}.png').is_file():
+        errors.append(f'Missing v0.7 mob atlas {actor}')
+boons = json.loads((root / 'data/boons.json').read_text(encoding='utf-8')).get('boons', [])
+mobs_data = json.loads((root / 'data/mobs.json').read_text(encoding='utf-8'))
+mob_ids = {mob['id'] for mob in mobs_data.get('mobs', [])}
+if len(boons) != 8 or len({boon['id'] for boon in boons}) != 8:
+    errors.append('Expected eight unique expedition boons')
+if not set(new_mobs).issubset(mob_ids):
+    errors.append('Missing new mob profile')
+for roster in mobs_data.get('regional_rosters', []):
+    if any(mob_id not in mob_ids for mob_id in roster):
+        errors.append('Regional roster references an unknown mob')
 if len(catalog['items']) != 120 or len(catalog['dungeons']) != 15:
     errors.append('Unexpected catalog size')
 if errors:

@@ -78,16 +78,23 @@ func tick(delta: float) -> void:
 					if not p.piercing:p.time=0;break
 		else:
 			if game.player!=null and game.player.hp>0 and game.player.position.distance_to(p.pos)<30:
-				game.player.hurt(p.damage,Vector2.ZERO,p.pos-p.velocity*.1);p.time=0
+				game.player.hurt(p.damage,Vector2.ZERO,p.pos-p.velocity*.1)
+				if p.get("slow",false):game.player.slowed=maxf(game.player.slowed,1.25)
+				if float(p.get("aoe",0))>0:
+					var radius=float(p.aoe)
+					fx(p.pos-Vector2(0,18),radius,Color("ff9a55"),.32)
+					if game.player.position.distance_to(p.pos)<radius and game.player.hp>0:game.player.hurt(p.damage*.45,Vector2.ZERO,p.pos)
+				p.time=0
 	projectiles=projectiles.filter(func(p):return p.time>0 and p.pos.x>-100 and p.pos.x<1380)
 	vfx.tick(delta)
 	queue_redraw()
 	overlay.queue_redraw()
 
-func missile(pos: Vector2, velocity: Vector2, damage: float, player: bool, color: Color, piercing: bool = false) -> void:
+func missile(pos: Vector2, velocity: Vector2, damage: float, player: bool, color: Color, piercing: bool = false, style_override: String = "", aoe: float = 0, slow: bool = false) -> void:
 	if projectiles.size()>=48:projectiles.pop_front()
-	var style="ember" if player and game.player!=null and game.player.kind=="maela" else "arrow"
-	projectiles.append({"style":style,"trail":[],"pos":pos,"velocity":velocity,"damage":damage,"player":player,"time":3.0,"color":color,"hit":[],"piercing":piercing})
+	var style=style_override
+	if style=="":style="ember" if player and game.player!=null and game.player.kind=="maela" else "arrow"
+	projectiles.append({"style":style,"trail":[],"pos":pos,"velocity":velocity,"damage":damage,"player":player,"time":3.0,"color":color,"hit":[],"piercing":piercing,"aoe":aoe,"slow":slow})
 
 func fx(pos: Vector2, radius: float, color: Color, seconds: float = .4) -> void:
 	effects.append({"pos":pos,"radius":radius,"color":color,"time":seconds,"duration":seconds})

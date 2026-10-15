@@ -1,6 +1,17 @@
-# Dungeons Fires: As Cinco Brasas - v0.6.0
+# Dungeons Fires: As Cinco Brasas - v0.7.0
 
 Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-fire. Abra o `project.godot` na raiz deste repositório.
+
+## Novos sistemas v0.7
+
+- **Builds de expedição:** oito bênçãos temporárias melhoram dano, defesa, vida, esquiva, habilidades, postura ou recuperação. O saque de uma rota de risco oferece três escolhas; até quatro bênçãos podem compor a build. A Mesa de Cartografia permite refazer uma oferta uma vez por expedição.
+- **Rotas ramificadas:** após cada sala, escolher entre o Santuário, que recupera 15% da vida, ou o Pacto de Caçada, que concede uma bênção e fortalece a próxima sala com campeão extra ou chefe fortalecido. O Pacto também aumenta o saque.
+- **Sinergias de heróis:** Maela e Varek quebram postura em conjunto; Varek recebe um acompanhamento de brasa de Maela; Neris aplica marcas arcanas. Cada apoio tem recarga própria e só ativa ao acertar uma técnica compatível.
+- **Refúgio ampliável:** cinco sobreviventes nomeados podem ser acolhidos ao recuperar as brasas regionais. Quatro projetos permanentes gastam ouro e minério: +1 poção inicial, +10% de ouro/minério dos inimigos, uma nova rolagem de bênçãos e +8% de vida máxima.
+- **Contratos:** Juramento sem poções, Caçada de Campeões e Marcha Acelerada acrescentam objetivos e recompensas opcionais. O estado é salvo junto da expedição e migra sem apagar saves v0.6.
+- **Cinco novos mobs:** Carrasco de Cinza (investida), Espectro do Sino (projétil que reduz movimento), Sentinela Ossária (bloqueio frontal), Acólito da Brasa Fria (bola de fogo em área) e Rastejante de Vidro (ataque rápido). Os atlas usam a identidade artística aprovada com paletas diferenciadas.
+
+O relatório de implementação e os testes estão em `docs/QA_v0_7.md`. Esta revisão é do projeto Godot; não foi gerado um APK novo nesta etapa.
 
 ## Combate e iluminação v0.6
 
@@ -53,7 +64,7 @@ Visual de fantasia anime inspirado na referência Ragnarok Online: seis ambiente
 
 Esta é uma base jogável em evolução, não o lançamento final descrito no GDD. Os personagens e ambientes ilustrados são originais. As poses produzidas foram integradas aos estados reais de combate; transições, alinhamento dos sprites e acabamento visual ainda podem ser refinados.
 
-A Mina tem cinco salas com composição própria. As demais quatorze expedições ainda usam encontros e arenas derivados de templates; não são quinze masmorras finais com level design exclusivo. Há três arquétipos comuns e variações de chefes. Cada classe tem duas técnicas fixas nesta versão; as 18 skills planejadas e as árvores completas ainda não estão implementadas. Talentos atuais aumentam vida/ataque. Estruturas Arquivo/Quartel têm aprimoramento persistente e leitura narrativa, mas missões pessoais/arena/contratos ainda são futuros. Não há afixos aleatórios, desmontagem, loadouts, Veterano ou quatro sets visuais de armadura por herói.
+A Mina tem cinco salas com composição própria. As demais quatorze expedições ainda usam encontros e arenas derivados de templates; não são quinze masmorras finais com level design exclusivo. Há 13 perfis de inimigos no total, incluindo cinco novas famílias comuns e chefes regionais. Cada herói ainda tem duas técnicas fixas; as 18 habilidades planejadas e árvores completas não estão implementadas. Talentos atuais aumentam vida/ataque; contratos de expedição já estão disponíveis, enquanto missões pessoais e arena ainda são futuros. Não há afixos aleatórios, desmontagem, loadouts, Veterano ou quatro sets visuais de armadura por herói.
 
 Equipamentos repetidos ou recebidos com mochila cheia convertem em três minérios, regra temporária mostrada no inventário. Primeiras conclusões também garantem uma arma compatível. A duração de 8-15 minutos do GDD é uma meta futura; as arenas de v0.1 são mais curtas.
 
@@ -73,6 +84,7 @@ Execute no diretório do projeto:
 godot --headless --editor --import --quit
 godot --headless --script tests/test_game.gd -- --qa
 godot --headless --script tests/test_combat_bot.gd -- --qa
+godot --headless --script tests/test_run_systems_v07.gd -- --qa
 ```
 
 O argumento QA usa saves separados e suprime áudio nos testes. Não distribua scripts internos de teste dentro do APK final.

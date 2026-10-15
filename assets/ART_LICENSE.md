@@ -8,3 +8,5 @@ O ambiente é uma pintura 2D; não representa cenário 3D navegável. Os efeitos
 
 
 v0.5.0 (15/10/2026): quatro ambientes originais da Mina dos Sinos e atlas transparente de oito objetos, gerados no ImageGen e integrados às salas jogáveis. Masters em `art_sources/mine_v050/`; importação técnica reproduzível em `tools/import_mine_assets.gd`. Os novos sons de lâmina pesada, escudo, impacto do chefe e baú foram sintetizados por código.
+
+v0.7.0 (15/10/2026): cinco variações de atlas para mobs foram derivadas dos próprios sprites originais do projeto por ajustes de paleta reproduzíveis. Elas preservam os frames e a animação dos atlas de origem; não usam imagens ou sprites externos. O mapeamento está em `assets/MOB_VARIANTS.json`.
