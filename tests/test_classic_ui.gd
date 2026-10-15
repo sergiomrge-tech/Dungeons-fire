@@ -22,6 +22,7 @@ func run() -> void:
 		game.ui.get_node(entry[0]).pressed.emit();await process_frame
 		assert(game.screen==entry[1],"Hub navigation: "+entry[0])
 	game.show_map(0);await process_frame
+	assert(game.actors.get_child_count()==0,"Hub actors must not appear over map destinations")
 	assert(game.ui.has_node("MapDungeon0") and game.ui.has_node("MapDungeon1") and game.ui.has_node("MapDungeon2"))
 	assert(not game.ui.get_node("MapPrepare").disabled,"First expedition is available")
 	for control in game.ui.get_children():

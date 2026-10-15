@@ -202,7 +202,7 @@ func show_journal() -> void:
 	button("VOLTAR AO REFÚGIO",Vector2(794,606),Vector2(368,53),show_hub)
 
 func show_map(region: int = 0, selected: int = -1) -> void:
-	clear_ui();screen="map";current_map_region=clampi(region,0,4);world.change_theme(current_map_region)
+	clear_ui();clear_actors();screen="map";current_map_region=clampi(region,0,4);world.change_theme(current_map_region)
 	var first=current_map_region*3
 	selected_map_dungeon=clampi(progress.unlocked() if selected<0 else selected,first,first+2)
 	classic_ui.build_map(current_map_region,selected_map_dungeon)

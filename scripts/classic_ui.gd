@@ -125,7 +125,7 @@ func action(words: String, kind: String, pos: Vector2, dimensions: Vector2, call
 		icon_at(kind,Vector2((dimensions.x-26)/2,7),26,b)
 	else:
 		b.alignment=HORIZONTAL_ALIGNMENT_LEFT
-		for state in ["normal","hover","pressed"]:
+		for state in ["normal","hover","pressed","disabled"]:
 			var s=b.get_theme_stylebox(state).duplicate();s.content_margin_left=48;s.content_margin_right=12;b.add_theme_stylebox_override(state,s)
 		icon_at(kind,Vector2(12,(dimensions.y-26)/2),26,b)
 	b.pressed.connect(callback);game.ui.add_child(b)
