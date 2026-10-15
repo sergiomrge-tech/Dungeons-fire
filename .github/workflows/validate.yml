@@ -103,10 +103,11 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: '1'
         run: |
           set -o pipefail
+          command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y ffmpeg)
           timeout 240s xvfb-run -a -s '-screen 0 1280x720x24' Godot_v4.6.1-stable_linux.x86_64 --rendering-method gl_compatibility --audio-driver Dummy --script tests/capture_combat_v06.gd -- --qa --capture-dir=/tmp/dungeons-vfx 2>&1 | tee /tmp/df-vfx-capture.log
           if grep -E 'SCRIPT ERROR|ERROR:' /tmp/df-vfx-capture.log; then exit 1; fi
           for hero in varek maela neris garron; do
-            ffmpeg -y -loglevel error -framerate 24 -i /tmp/dungeons-vfx/$hero/frame_%04d.png -c:v libx264 -preset fast -crf 21 -pix_fmt yuv420p -movflags +faststart /tmp/dungeons-vfx/Dungeons_Fires_v060_$hero.mp4
+            ffmpeg -y -loglevel error -framerate 24 -i /tmp/dungeons-vfx/$hero/frame_%04d.jpg -c:v libx264 -preset fast -crf 21 -pix_fmt yuv420p -movflags +faststart /tmp/dungeons-vfx/Dungeons_Fires_v060_$hero.mp4
           done
           ffmpeg -y -loglevel error -i /tmp/dungeons-vfx/Dungeons_Fires_v060_varek.mp4 -vf 'fps=12,scale=768:-1:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=sierra2_4a' /tmp/dungeons-vfx/Dungeons_Fires_v060_Varek.gif
       - uses: actions/upload-artifact@v4

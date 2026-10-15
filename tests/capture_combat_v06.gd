@@ -37,7 +37,7 @@ func record_hero(kind: String) -> void:
 			if i==46:hero.state="idle";hero.request_skill(1)
 			if i==76:hero.state="idle";hero.supreme=100;hero.request_supreme()
 		for substep in range(2):game._physics_process(1.0/48)
-		var img=await frame();assert(img.save_png(folder.path_join("frame_%04d.png"%i))==OK)
+		var img=await frame();assert(img.save_jpg(folder.path_join("frame_%04d.jpg"%i),.94)==OK)
 		if i==(49 if kind=="varek" else 56):assert(img.save_png(output_dir.path_join(kind+"_skill.png"))==OK)
 		if i==96:assert(img.save_png(output_dir.path_join(kind+"_supreme.png"))==OK)
 	print("VFX_CAPTURED: "+kind)
@@ -66,7 +66,7 @@ func record_boss() -> void:
 	var folder=output_dir.path_join("garron");DirAccess.make_dir_recursive_absolute(folder)
 	for i in range(60):
 		for substep in range(2):game._physics_process(1.0/48)
-		var img=await frame();assert(img.save_png(folder.path_join("frame_%04d.png"%i))==OK)
+		var img=await frame();assert(img.save_jpg(folder.path_join("frame_%04d.jpg"%i),.94)==OK)
 		if i==38:assert(img.save_png(output_dir.path_join("garron_impact.png"))==OK)
 func run() -> void:
 	assert(DisplayServer.get_name()!="headless","Actual framebuffer required")
