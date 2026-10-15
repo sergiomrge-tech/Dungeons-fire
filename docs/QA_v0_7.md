@@ -14,7 +14,7 @@ Projeto importado no Godot 4.6.1 estável; auditoria de arquivos aprovada (216 a
 | Entrada escalada por viewport | Aprovada |
 | Animações, luz e efeitos de combate | 58 verificações aprovadas |
 | Atlas e HUD existentes | 14 atlas, 112 poses, 14 retratos, 6 cenários e tempos de ataque aprovados |
-| Sistemas v0.7 | 40 verificações: 5 mobs, 8 bênçãos, 3 contratos, 4 projetos, rotas, salvamento, sinergias e geometria dos novos menus |
+| Sistemas v0.7 | 41 verificações: 5 mobs, 8 bênçãos, 3 contratos, 4 projetos, rotas, salvamento, sinergias e legibilidade dos novos menus |
 
 O workflow `.github/workflows/validate.yml` captura cinco cenas do framebuffer real: os novos mobs, contratos, escolha de rota, bênçãos e projetos do refúgio. O APK legado permanece inalterado; esta revisão valida o projeto Godot.
 

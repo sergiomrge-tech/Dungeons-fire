@@ -95,5 +95,13 @@ func run() -> void:
 	game.boon_offers=["long_breath","hunter_sigil","soul_siphon"];game.show_boon_draft()
 	var boon_cards=game.ui.get_children().filter(func(n):return n is Button and n.has_meta("boon_id"))
 	check(boon_cards.size()==3 and boon_cards.all(func(n):return n.size.x==340 and n.position.x>=95 and n.position.x+n.size.x<=1185),"boon cards fit inside the panel")
+	var boon_details=game.ui.get_children().filter(func(n):return n is Label and n.position.y==329)
+	var details_fit=boon_details.size()==3
+	for detail in boon_details:
+		details_fit=details_fit and detail.size.x<=300 and detail.clip_text
+		for line in detail.text.split("\n"):details_fit=details_fit and line.length()<=27
+	for id in db.boons.keys():
+		for line in game.wrap_card_text(str(db.boon(str(id)).description)).split("\n"):details_fit=details_fit and line.length()<=27
+	check(details_fit,"all boon descriptions wrap inside their cards")
 	var report={"suite":"run_systems_v07","checks":checks,"failures":failures,"new_mobs":5,"boons":8,"contracts":3,"camp_projects":4}
 	print(JSON.stringify(report));game.queue_free();await process_frame;quit(0 if failures.is_empty() else 1)

@@ -306,6 +306,15 @@ func choose_safe_route() -> void:
 func choose_hunt_route() -> void:
 	route_step="draft";boon_offers=boon_options();save_run();show_boon_draft()
 
+func wrap_card_text(value: String, limit: int = 27) -> String:
+	var lines=PackedStringArray();var line=""
+	for word in value.split(" ",false):
+		if not line.is_empty() and line.length()+word.length()+1>limit:
+			lines.append(line);line=word
+		else:line=word if line.is_empty() else line+" "+word
+	if not line.is_empty():lines.append(line)
+	return "\n".join(lines)
+
 func show_boon_draft() -> void:
 	clear_ui();screen="boon_draft";panel(Vector2(95,132),Vector2(1090,456));title("ESCOLHA UMA BÊNÇÃO DE EXPEDIÇÃO","Ela dura até o retorno ao refúgio. O pacto fortalece a próxima sala.")
 	if boon_offers.is_empty():boon_offers=boon_options()
@@ -318,8 +327,8 @@ func show_boon_draft() -> void:
 		choice.tooltip_text="%s — %s"%[boon.name,boon.description]
 		var heading=label("✦  %s"%boon.name,Vector2(x+16,266),Vector2(width-32,40),22)
 		heading.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-		var detail=label(str(boon.description),Vector2(x+20,329),Vector2(width-40,84),18)
-		detail.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		var detail=label(wrap_card_text(str(boon.description)),Vector2(x+20,329),Vector2(width-40,84),18)
+		detail.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;detail.clip_text=true
 		detail.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;detail.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
 	if project_built("scribe_table") and not boon_reroll_used:
 		button("REFAZER OFERTAS • 1 uso",Vector2(435,506),Vector2(410,55),reroll_boon_offers)
