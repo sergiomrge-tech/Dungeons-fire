@@ -54,6 +54,18 @@ var room_layout = DFDungeonLayout.new()
 var room_events: Array = []
 var interact_button: Button
 var hit_stop: float = 0
+var run_boons: Array = []
+var route_step: String = ""
+var route_risk_next: bool = false
+var room_risk: bool = false
+var boon_offers: Array = []
+var boon_reroll_used: bool = false
+var active_contract: String = ""
+var contract_elapsed: float = 0
+var contract_potions_used: int = 0
+var contract_elite_kills: int = 0
+var contract_failed: bool = false
+var synergy_cd: float = 0
 
 func _ready() -> void:
 	get_tree().quit_on_go_back=false
@@ -151,16 +163,26 @@ func show_menu() -> void:
 	button("RETOMAR EXPEDIÇÃO",Vector2(84,410),Vector2(458,55),resume_run,progress.d.run.is_empty())
 	button("HISTÓRIA",Vector2(84,482),Vector2(220,53),func():show_lore(false))
 	button("OPÇÕES",Vector2(320,482),Vector2(222,53),func():previous_screen="menu";show_settings())
-	label("v0.6.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("c5b795"))
+	label("v0.7.0 • Uma aventura original em Edrava",Vector2(84,575),Vector2(450,28),16,Color("c5b795"))
 	var hero=spawn_actor(progress.d.hero,Vector2(870,550),true,180,28);hero.size_scale=2.7
 	label("Seu próximo capítulo começa aqui.",Vector2(710,590),Vector2(500,35),21,Color("ffffff"))
 
 func spawn_actor(kind: String, pos: Vector2, human: bool, life: float, damage: float, boss: bool = false) -> DFActor:
-	var a=Actor.new();a.id=next_enemy_id;next_enemy_id+=1;a.setup(self,kind,human,life,damage,boss);a.position=pos;a.z_index=int(pos.y);actors.add_child(a)
+	var a=Actor.new();a.id=next_enemy_id;next_enemy_id+=1
+	var mob_data=db.mob(kind) if not human else {}
+	a.setup(self,kind,human,life,damage,boss,mob_data);a.defense=float(mob_data.get("defense",0))
+	a.position=pos;a.z_index=int(pos.y);actors.add_child(a)
 	if human:player=a
 	else:enemies.append(a)
 	if human:apply_equipment_visual(a)
 	return a
+
+func spawn_mob(kind: String, pos: Vector2, base_hp: float, base_attack: float, elite_mob: bool = false, route_mob: bool = false) -> DFActor:
+	var data=db.mob(kind)
+	var actor=spawn_actor(kind,pos,false,base_hp*float(data.get("hp",1.0)),base_attack*float(data.get("attack",1.0)))
+	actor.elite=elite_mob or route_mob
+	actor.route_reward=route_mob
+	return actor
 
 func apply_equipment_visual(a: DFActor) -> void:
 	var family=db.item(progress.d.equipped.weapon).get("family","")
@@ -169,6 +191,26 @@ func apply_equipment_visual(a: DFActor) -> void:
 
 func relic_effect() -> String:
 	return db.item(str(progress.d.equipped.relic)).get("effect","")
+
+func run_boon_total(stat: String) -> float:
+	var total=0.0
+	for id in run_boons:
+		total+=float(db.boon(str(id)).get(stat,0.0))
+	return total
+
+func project_built(id: String) -> bool:
+	return progress.d.get("camp_projects",[]).has(id)
+
+func boon_options() -> Array:
+	var available=[]
+	for id in db.boons.keys():
+		if not run_boons.has(id):available.append(str(id))
+	var rng=RandomNumberGenerator.new()
+	rng.seed=hash("%d:%d:%d:%s:%s"%[dungeon,room,run_boons.size(),progress.d.hero,"reroll" if boon_reroll_used else "first"])
+	for i in range(available.size()-1,0,-1):
+		var j=rng.randi_range(0,i);var value=available[i];available[i]=available[j];available[j]=value
+	var count=mini(3,available.size())
+	return available.slice(0,count) if count>0 else []
 
 func show_hub() -> void:
 	clear_ui();clear_actors();screen="hub";hero_dead=false;world.change_theme(5)
@@ -220,9 +262,68 @@ func show_preparation(index: int) -> void:
 	var lore_label=label(db.dungeons[index].lore,Vector2(210,233),Vector2(850,108),22);lore_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	label("Analógico: mover  |  Golpe: combo  |  Esquiva: evitar dano",Vector2(210,365),Vector2(890,30),20)
 	label("Duas técnicas + Brasa suprema. Poções limitadas por expedição.",Vector2(210,405),Vector2(890,30),19)
-	label("Solo • 5 salas • Vitória deposita saque no refúgio",Vector2(210,448),Vector2(890,30),18,Color("c5b795"))
-	button("ENTRAR NA MASMORRA",Vector2(210,518),Vector2(490,66),func():confirm_start(index))
-	button("VOLTAR",Vector2(745,518),Vector2(300,66),func():show_map(int(index/3)))
+	label("Solo • 5 salas • Vitória deposita saque no refúgio",Vector2(210,440),Vector2(890,30),18,Color("c5b795"))
+	var selected_contract=contract_label(str(progress.d.get("contract_selected","")))
+	button("CONTRATO: %s"%selected_contract,Vector2(210,472),Vector2(490,47),func():show_contracts(index))
+	button("ENTRAR NA MASMORRA",Vector2(210,538),Vector2(490,62),func():confirm_start(index))
+	button("VOLTAR",Vector2(745,538),Vector2(300,62),func():show_map(int(index/3)))
+
+func contract_label(id: String) -> String:
+	return {"":"Nenhum","flame_oath":"Juramento sem poções","champion_hunt":"Caçada de campeões","swift_path":"Marcha acelerada"}.get(id,"Nenhum")
+
+func show_contracts(index: int) -> void:
+	clear_ui();screen="contracts";panel(Vector2(180,84),Vector2(920,570));title("QUADRO DE CONTRATOS","Escolha um objetivo opcional antes da expedição.")
+	var choices=[
+		["","Sem contrato","Expedição normal, sem modificadores."],
+		["flame_oath","Juramento sem poções","Não use poções. Recompensa: +180 ouro, +12 minério."],
+		["champion_hunt","Caçada de campeões","Enfrente um campeão extra em cada sala comum; derrote 2. Recompensa: +260 ouro, +18 minério."],
+		["swift_path","Marcha acelerada","Conclua em até 7 minutos. Recompensa: +200 ouro, +15 minério." ]
+	]
+	for i in range(choices.size()):
+		var row=choices[i];var y=183+i*86
+		var text="%s%s\n%s"%["✓  " if str(progress.d.get("contract_selected",""))==str(row[0]) else "",row[1],row[2]]
+		button(text,Vector2(238,y),Vector2(804,72),func():select_contract(str(row[0]),index))
+	button("VOLTAR",Vector2(868,568),Vector2(300,55),func():show_preparation(index))
+
+func select_contract(id: String, index: int) -> void:
+	progress.d.contract_selected=id;progress.save();show_preparation(index)
+
+func show_route_choice() -> void:
+	if route_step=="draft":show_boon_draft();return
+	clear_ui();screen="route_choice";panel(Vector2(238,162),Vector2(804,396));title("A MASMORRA SE ABRE EM DUAS ROTAS","A escolha vale para a próxima sala.")
+	button("TRILHA SEGURA\nRecupere 15% da vida e avance sem reforços.",Vector2(280,274),Vector2(720,82),choose_safe_route)
+	var risk_text="Escolha uma bênção; o chefe ficará mais forte e dará saque extra." if room==3 else "Escolha uma bênção; a próxima sala ganha um campeão e saque extra."
+	button("PACTO DE CAÇADA\n"+risk_text,Vector2(280,377),Vector2(720,98),choose_hunt_route)
+	button("DEPOSITAR SAQUE",Vector2(280,501),Vector2(300,54),retreat)
+	button("VOLTAR À SALA",Vector2(700,501),Vector2(300,54),combat_ui)
+
+func choose_safe_route() -> void:
+	player.hp=minf(player.max_hp,player.hp+player.max_hp*.15)
+	world.fx(player.position-Vector2(0,35),72,Color("a8d6a0"),.48)
+	route_step="";boon_offers=[];save_run();next_room()
+
+func choose_hunt_route() -> void:
+	route_step="draft";boon_offers=boon_options();save_run();show_boon_draft()
+
+func show_boon_draft() -> void:
+	clear_ui();screen="boon_draft";panel(Vector2(95,132),Vector2(1090,456));title("ESCOLHA UMA BÊNÇÃO DE EXPEDIÇÃO","Ela dura até o retorno ao refúgio. O pacto fortalece a próxima sala.")
+	if boon_offers.is_empty():boon_offers=boon_options()
+	var width=350.0;var gap=22.0;var total=width*boon_offers.size()+gap*maxi(0,boon_offers.size()-1);var start=(1280-total)/2
+	for i in range(boon_offers.size()):
+		var id=str(boon_offers[i]);var boon=db.boon(id)
+		button("✦  %s\n\n%s"%[boon.name,boon.description],Vector2(start+i*(width+gap),272),Vector2(width,190),select_route_boon.bind(id))
+	if project_built("scribe_table") and not boon_reroll_used:
+		button("REFAZER OFERTAS • 1 uso",Vector2(435,506),Vector2(410,55),reroll_boon_offers)
+	button("CANCELAR",Vector2(925,506),Vector2(250,55),show_route_choice)
+
+func select_route_boon(id: String) -> void:
+	if not boon_offers.has(id) or run_boons.has(id):return
+	run_boons.append(id);boon_offers=[];route_step="";route_risk_next=true
+	save_run();next_room();toast("Bênção obtida: %s"%db.boon(id).name,3)
+
+func reroll_boon_offers() -> void:
+	if not project_built("scribe_table") or boon_reroll_used:return
+	boon_reroll_used=true;boon_offers=boon_options();save_run();show_boon_draft()
 
 func confirm_start(index: int) -> void:
 	if not progress.d.run.is_empty():
@@ -233,19 +334,27 @@ func start_dungeon(index: int, resume: bool = false) -> void:
 	clear_ui();clear_actors();screen="combat";hero_dead=false;dungeon=index;room=0;cleared_room=false;wave_ready=0;next_enemy_id=1
 	world.change_theme(int(db.dungeons[index].region))
 	var stats=progress.hero_stats();spawn_actor(progress.d.hero,Vector2(265,505),true,stats.hp,stats.attack);player.defense=stats.defense
-	potions=3 if progress.d.hub.botica>=3 else 2
+	potions=mini(4,(3 if progress.d.hub.botica>=3 else 2)+(1 if project_built("supply_cache") else 0))
 	loot={"gold":0,"ore":0,"cloth":0,"xp":0,"items":[]};room_events=[];guard_charge=0;hit_stop=0
+	run_boons=[];route_step="";route_risk_next=false;room_risk=false;boon_offers=[];boon_reroll_used=false
+	active_contract=str(progress.d.get("contract_selected",""));contract_elapsed=0;contract_potions_used=0;contract_elite_kills=0;contract_failed=false;synergy_cd=0
+	_refresh_combat_stats()
 	if resume:
 		var run=progress.d.run.duplicate(true)
 		room=int(run.room);potions=int(run.potions);loot=run.loot;cleared_room=run.cleared
 		room_events=run.get("events",[]).duplicate();room_layout.configure(dungeon,room);world.configure_room()
 		player.hp=float(run.hp);player.position=Vector2(run.x,run.y);player.supreme=float(run.get("supreme",0));player.mana=float(run.get("mana",100))
+		run_boons=run.get("boons",[]).duplicate();route_step=str(run.get("route_step",""));route_risk_next=bool(run.get("route_risk_next",false));room_risk=bool(run.get("room_risk",false))
+		boon_offers=run.get("boon_offers",[]).duplicate();boon_reroll_used=bool(run.get("boon_reroll_used",false))
+		active_contract=str(run.get("contract",active_contract));contract_elapsed=float(run.get("contract_elapsed",0));contract_potions_used=int(run.get("contract_potions_used",0));contract_elite_kills=int(run.get("contract_elite_kills",0));contract_failed=bool(run.get("contract_failed",false));synergy_cd=float(run.get("synergy_cd",0))
 		for data in run.enemies:
 			var a=spawn_actor(data.kind,Vector2(data.x,data.y),false,data.max_hp,data.attack,data.boss)
 			a.hp=data.hp;a.id=int(data.id);a.facing=int(data.facing)
 			a.boss_phase=int(data.get("boss_phase",1));a.boss_step=int(data.get("boss_step",0));a.elite=bool(data.get("elite",false))
+			a.route_reward=bool(data.get("route_reward",false));a.marked=float(data.get("marked",0));a.slowed=float(data.get("slowed",0))
 			a.cooldown=1.0
 			next_enemy_id=maxi(next_enemy_id,a.id+1)
+		_refresh_combat_stats()
 	else:spawn_room()
 	combat_ui();save_run()
 	if resume:toast("Expedição restaurada. Vida, poções e saque preservados.",4)
@@ -268,8 +377,7 @@ func spawn_room() -> void:
 	room_layout.configure(dungeon,room);world.configure_room()
 	if dungeon==0 and room<4:
 		for entry in room_layout.definition.get("enemies",[]):
-			var actor=spawn_actor(entry[0],Vector2(entry[1],entry[2]),false,(43+(15 if entry[0]=="brute" else 0))*entry[3],9)
-			actor.elite=float(entry[3])>1.0
+			spawn_mob(str(entry[0]),Vector2(entry[1],entry[2]),(43+(15 if entry[0]=="brute" else 0))*float(entry[3]),9,float(entry[3])>1.0)
 		if room_layout.definition.get("rest",false) and not room_events.has("MINE_REST_03"):
 			player.hp=minf(player.max_hp,player.hp+player.max_hp*.25);room_events.append("MINE_REST_03")
 			toast("Abrigo seguro • 25% de vida recuperada. Abra o baú antes de seguir.",5)
@@ -277,25 +385,29 @@ func spawn_room() -> void:
 		var kind="brute"
 		if db.dungeons[dungeon].guardian:kind=["garron","sereia","rei","colosso","severan"][region]
 		var life=320 if dungeon==0 else 230+dungeon*47
-		spawn_actor(kind,Vector2(900,480),false,life,20+region*4,true)
-		if region>0:spawn_actor("knight",Vector2(1040,531),false,50+region*15,10+region*3)
+		var boss_actor=spawn_actor(kind,Vector2(900,480),false,life,20+region*4,true)
+		boss_actor.route_reward=room_risk
+		if room_risk:boss_actor.max_hp*=1.18;boss_actor.hp=boss_actor.max_hp;boss_actor.attack_power*=1.12
+		if region>0:spawn_mob("knight",Vector2(1040,531),50+region*15,10+region*3)
 	else:
+		var pool=db.roster(region)
 		for i in range(count):
-			var kind=["knight","archer","brute"][(i+room+dungeon)%3]
-			spawn_actor(kind,Vector2(660+i*118,436+(i*41+room*19)%116),false,43+dungeon*11+(15 if kind=="brute" else 0),9+region*3)
+			var kind=str(pool[(i*2+room+dungeon)%pool.size()])
+			var mob= db.mob(kind)
+			var base_hp=43+dungeon*11+(15 if kind in ["brute","bone_sentinel"] else 0)
+			spawn_mob(kind,Vector2(660+i*118,436+(i*41+room*19)%116),base_hp,9+region*3)
 		if room==3:
 			player.hp=minf(player.max_hp,player.hp+player.max_hp*.25)
 			toast("Descanso: recuperou 25% da vida. Prepare-se para o chefe.",5)
+	if room<4 and (room_risk or active_contract=="champion_hunt"):
+		var pool=db.roster(region);var champion_kind=str(pool[(room+region+3)%pool.size()])
+		spawn_mob(champion_kind,Vector2(1000,482),68+dungeon*13,12+region*3,true,room_risk)
 	if hud!=null:combat_ui()
 	save_run()
 
 func combat_ui() -> void:
 	clear_ui();screen="combat";controls.active=true;controls.hero_kind=progress.d.hero;toast_label.position.y=207
-	if player!=null:
-		var stats=progress.hero_stats()
-		player.attack_power=stats.attack;player.defense=stats.defense
-		player.max_hp=stats.hp;player.hp=minf(player.hp,player.max_hp)
-		apply_equipment_visual(player)
+	_refresh_combat_stats()
 	panel(Vector2(22,18),Vector2(380,108));portrait(progress.d.hero,Vector2(26,25),Vector2(82,92))
 	hud=label("",Vector2(112,29),Vector2(278,34),16)
 	health_bar=meter(Vector2(114,70),Vector2(263,14),Color("69ae83"));health_bar.max_value=player.max_hp
@@ -307,15 +419,29 @@ func combat_ui() -> void:
 	button("PAUSA",Vector2(1023,24),Vector2(200,57),show_pause)
 	boss_hud=label("",Vector2(630,135),Vector2(600,62),21,Color("f0dab0"))
 	if cleared_room:
-		button("PRÓXIMA SALA  →",Vector2(980,246),Vector2(255,52),next_room)
+		button("ESCOLHER ROTA  →",Vector2(980,246),Vector2(255,52),show_route_choice)
 		button("DEPOSITAR SAQUE",Vector2(980,306),Vector2(255,46),retreat)
 	interact_button=button("ABRIR BAÚ • F",Vector2(477,568),Vector2(300,52),interact_chest);interact_button.visible=false
 	update_hud()
+	if cleared_room and route_step=="draft":call_deferred("show_boon_draft")
+
+func _refresh_combat_stats() -> void:
+	if player==null:return
+	var stats=progress.hero_stats()
+	player.attack_power=float(stats.attack)*(1.0+run_boon_total("attack_mult"))
+	player.defense=float(stats.defense)+run_boon_total("defense_add")
+	var camp_hp=.08 if project_built("ember_ward") else 0.0
+	player.max_hp=float(stats.hp)*(1.0+run_boon_total("hp_mult")+camp_hp)
+	player.hp=minf(player.hp,player.max_hp)
+	apply_equipment_visual(player)
 
 func update_hud() -> void:
 	if player==null or hud==null:return
 	hud.text="%s • Nv. %d\nVida %d / %d"%[progress.d.hero.capitalize(),progress.hero_stats().level,player.hp,player.max_hp]
-	if expedition_status!=null:expedition_status.text="Sala %d / 5  •  Poções %d"%[room+1,potions]
+	if expedition_status!=null:
+		var build_note="  •  Bênçãos %d"%run_boons.size() if not run_boons.is_empty() else ""
+		var contract_note="  •  %s"%contract_label(active_contract) if active_contract!="" else ""
+		expedition_status.text="Sala %d / 5  •  Poções %d%s%s"%[room+1,potions,build_note,contract_note]
 	if health_bar!=null:health_bar.value=player.hp
 	if mana_bar!=null:mana_bar.value=player.mana if player.kind=="maela" else player.supreme
 	controls.cooldowns={"dodge":player.dodge_cd,"skill0":player.skill_cd[0],"skill1":player.skill_cd[1],"charge":player.supreme}
@@ -353,6 +479,7 @@ func interact_chest() -> void:
 func next_room() -> void:
 	if not cleared_room:return
 	room+=1
+	room_risk=route_risk_next;route_risk_next=false;route_step="";boon_offers=[]
 	spawn_room();combat_ui()
 
 func windup_count() -> int:
@@ -366,11 +493,13 @@ func player_strike(a: DFActor, action_name: String) -> void:
 	var family=weapon.get("family","sword")
 	var ranged=family in ["staff","focus","bow"]
 	var damage=a.attack_power*(1.3 if a.combo==2 and action_name=="basic" else 1.0)
+	if action_name!="basic":damage*=1.0+run_boon_total("skill_mult")
 	var range_x=145.0 if family=="hammer" else 116.0
 	var depth=56.0
 	var color=Color("ffd179")
 	var charged=relic_effect()=="guard" and guard_charge>0
 	var landed=false
+	var hit_targets:Array=[]
 	var omnidirectional=false
 	if action_name=="skill0":
 		damage*=2.1;range_x=240;depth=80
@@ -404,12 +533,18 @@ func player_strike(a: DFActor, action_name: String) -> void:
 			var boost=1.0
 			if charged:boost=1.25;e.stagger_multiplier=2.5
 			if relic_effect()=="rupture" and action_name!="basic":boost=1.20
+			if (e.elite or e.boss) and run_boon_total("elite_damage")>0:boost*=1.0+run_boon_total("elite_damage")
+			if run_boon_total("stagger_mult")>0:e.stagger_multiplier=maxf(e.stagger_multiplier,1.0+run_boon_total("stagger_mult"))
 			if e.hurt(damage*boost,Vector2(a.facing*(18 if not e.boss else 4),0),a.position):
-				landed=true
+				landed=true;hit_targets.append(e)
 				a.supreme=minf(100,a.supreme+8)
 				if action_name=="skill1" or relic_effect()=="slow":e.slowed=2.5
+	if landed and (action_name=="skill1" or (a.kind=="varek" and action_name=="skill0")):
+		trigger_hero_synergy(a,hit_targets)
 
 	if landed:
+		if action_name!="basic" and run_boon_total("heal_fraction")>0:
+			a.hp=minf(a.max_hp,a.hp+a.max_hp*run_boon_total("heal_fraction"))
 		hit_stop=.085 if action_name=="supreme" else (.065 if a.combo==2 or action_name=="skill0" else .035)
 		if action_name!="basic" and progress.d.settings.shake:shake_timer=maxf(shake_timer,.16)
 		if charged:
@@ -422,28 +557,66 @@ func enemy_strike(a: DFActor) -> void:
 		if a.boss_profile.move!="rush" and DFBossPatterns.contains(a.boss_profile,player.position) and not room_layout.segment_blocked(a.boss_profile.origin,player.position):
 			player.hurt(a.attack_power*a.boss_profile.damage,Vector2(a.facing*18,0),a.boss_profile.origin)
 		return
-	if a.kind in ["archer","sereia","severan"]:
+	if bool(a.mob_profile.get("ranged",a.kind in ["archer","sereia","severan"])):
 		var vel=(a.aim-a.position).normalized()*320
-		world.missile(a.position,vel,a.attack_power,false,Color("ee7068"))
+		var projectile=str(a.mob_profile.get("projectile","arrow"))
+		var color=Color("ee7068")
+		if projectile=="spectral":color=Color("8edbff")
+		elif projectile=="fireball":color=Color("ff8851")
+		world.missile(a.position,vel,a.attack_power,false,color,false,projectile,float(a.mob_profile.get("aoe",0)),bool(a.mob_profile.get("slow",false)))
 		if a.boss and a.hp<a.max_hp*.5:
-			world.missile(a.position,vel.rotated(.12),a.attack_power*.8,false,Color("c2dceb"))
-			world.missile(a.position,vel.rotated(-.12),a.attack_power*.8,false,Color("c2dceb"))
+			world.missile(a.position,vel.rotated(.12),a.attack_power*.8,false,Color("c2dceb"),false,projectile,float(a.mob_profile.get("aoe",0)),bool(a.mob_profile.get("slow",false)))
+			world.missile(a.position,vel.rotated(-.12),a.attack_power*.8,false,Color("c2dceb"),false,projectile,float(a.mob_profile.get("aoe",0)),bool(a.mob_profile.get("slow",false)))
 	else:
-		var reach=150.0 if a.boss else 89.0
+		var reach=150.0 if a.boss else float(a.mob_profile.get("reach",89.0))
 		var depth=70.0 if a.boss else 45.0
 		world.fx(a.position+Vector2(a.facing*40,-12),reach*.5,Color(1,.35,.24),.28)
 		var diff: Vector2=player.position-a.position
 		if absf(diff.x)<reach and absf(diff.y)<depth and diff.x*a.facing>-20 and not room_layout.segment_blocked(a.position,player.position):
-			player.hurt(a.attack_power*(1.25 if a.boss and a.hp<a.max_hp*.5 else 1.0),Vector2(a.facing*13,0),a.position)
+			var strike_scale=1.25 if a.boss and a.hp<a.max_hp*.5 else (1.22 if a.mob_profile.get("special","")=="double_slash" else 1.0)
+			player.hurt(a.attack_power*strike_scale,Vector2(a.facing*13,0),a.position)
+			if a.mob_profile.get("special","")=="double_slash":world.fx(a.position+Vector2(a.facing*67,-9),37,Color("c58cff"),.22)
 		if a.boss and a.hp<a.max_hp*.5:
 			world.fx(a.position,110,Color("ed7851"),.5)
 			if player.position.distance_to(a.position)<110:player.hurt(a.attack_power*.65,Vector2.ZERO,a.position)
+
+func trigger_hero_synergy(caster: DFActor, targets: Array) -> void:
+	if synergy_cd>0:return
+	var required=3 if caster.kind in ["varek","neris"] else 0
+	if progress.unlocked()<required:return
+	var affected=0
+	for target in targets:
+		if not is_instance_valid(target) or target.hp<=0:continue
+		match caster.kind:
+			"varek":
+				target.marked=3.0
+				target.hurt(caster.attack_power*.38,Vector2(caster.facing*10,0),caster.position)
+				world.vfx.emit("impact",target.position-Vector2(0,40),Color("ffbd61"),18,150,caster.facing)
+			"maela":
+				target.stagger_multiplier=maxf(target.stagger_multiplier,1.9)
+				target.hurt(caster.attack_power*.52,Vector2(caster.facing*10,0),caster.position)
+				world.fx(target.position-Vector2(0,30),55,Color("75bfff"),.34)
+			"neris":
+				target.marked=3.5;target.slowed=maxf(target.slowed,1.0)
+				world.vfx.emit("impact",target.position-Vector2(0,42),Color("a888ff"),15,125,caster.facing)
+		affected+=1
+	if affected>0:
+		synergy_cd=8.0
+		var helper={"varek":"Maela","maela":"Varek","neris":"Maela"}.get(caster.kind,"companheiro")
+		toast("Sinergia %s + %s!"%[caster.kind.capitalize(),helper],1.5)
 
 func damage_text(pos: Vector2, value: int, human: bool) -> void:
 	world.numbers.append({"pos":pos,"value":value,"time":1.0,"player":human})
 
 func on_enemy_dead(a: DFActor) -> void:
-	loot.gold+=8+dungeon*2;loot.ore+=1;loot.xp+=18+dungeon*7
+	var camp_bonus=1.10 if project_built("hunter_lodge") else 1.0
+	loot.gold+=int(round((8+dungeon*2)*camp_bonus));loot.ore+=int(round(camp_bonus));loot.xp+=18+dungeon*7
+	if a.elite:contract_elite_kills+=1
+	if a.route_reward:
+		loot.gold+=32+dungeon*2;loot.ore+=3;loot.xp+=35
+		if not loot.has("items"):loot.items=[]
+		var drops=db.unlocked_items(int(dungeon/3)+1,progress.d.hero).filter(func(item):return item.slot!="relic")
+		if not drops.is_empty():loot.items.append(drops[(a.id+dungeon)%drops.size()].id)
 	if a.id%3==0:loot.cloth+=1
 	if a.id%4==0:
 		if not loot.has("items"):loot.items=[]
@@ -454,6 +627,18 @@ func on_enemy_dead(a: DFActor) -> void:
 	play_sfx("coin")
 	save_run()
 
+func resolve_contract() -> bool:
+	if active_contract=="" or contract_failed:return false
+	var success=false
+	match active_contract:
+		"flame_oath":success=contract_potions_used==0
+		"champion_hunt":success=contract_elite_kills>=2
+		"swift_path":success=contract_elapsed<=420
+	if success:
+		var reward={"flame_oath":[180,12],"champion_hunt":[260,18],"swift_path":[200,15]}.get(active_contract,[0,0])
+		loot.gold+=int(reward[0]);loot.ore+=int(reward[1]);loot.xp+=60
+	return success
+
 func on_player_dead() -> void:
 	hero_dead=true;controls.active=false;controls.clear();attack_held=false
 	progress.d.run={};progress.save()
@@ -461,6 +646,7 @@ func on_player_dead() -> void:
 
 func finish_dungeon() -> void:
 	screen="result";controls.active=false
+	var contract_completed=resolve_contract()
 	var result=progress.complete(dungeon,loot)
 	if result.has("error"):
 		dialog("Falha ao salvar",result.error,"TENTAR NOVAMENTE",finish_dungeon,show_menu);return
@@ -473,6 +659,7 @@ func finish_dungeon() -> void:
 	if db.dungeons[dungeon].guardian:message="Brasa recuperada! Núcleo e receita de relíquia liberados na Forja."
 	if dungeon==2:message="Núcleo de Garron + receita Marca do Portão! Forja nível 2: defesa carrega um golpe que rompe postura."
 	if dungeon==14:message="O Incêndio Branco terminou. Os nomes voltam a ser lembrados. Edrava pode mudar."
+	if active_contract!="":message+="\nContrato concluído: bônus de recompensa recebido." if contract_completed else "\nContrato não concluído; a vitória ainda vale normalmente."
 	var m=label(message,Vector2(218,406),Vector2(850,70),22);m.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	button("VOLTAR AO REFÚGIO",Vector2(218,517),Vector2(450,56),show_hub)
 	button("MAPA",Vector2(717,517),Vector2(300,56),func():show_map(int(db.dungeons[dungeon].region)))
@@ -494,8 +681,10 @@ func retreat() -> void:
 	show_hub();toast("Saque comum depositado. Recompensas de chefe exigem vitória.",5)
 
 func use_potion() -> void:
+	if active_contract=="flame_oath":toast("O Juramento sem poções proíbe cura durante esta expedição.",2);return
 	if potions<1 or player==null or player.hp<=0 or player.hp>=player.max_hp:return
 	potions-=1
+	contract_potions_used+=1
 	var cure=[.30,.40,.45][int(progress.d.hub.botica)-1]
 	player.hp=minf(player.max_hp,player.hp+player.max_hp*cure)
 	world.fx(player.position-Vector2(0,50),60,Color("93cd89"),.5);play_sfx("magic");save_run()
@@ -519,7 +708,7 @@ func save_run() -> bool:
 	var enemy_data:Array=[]
 	for a in enemies:
 		if a.hp>0:enemy_data.append(a.snapshot())
-	progress.d.run={"dungeon":dungeon,"room":room,"hp":player.hp,"x":player.position.x,"y":player.position.y,"potions":potions,"loot":loot.duplicate(true),"enemies":enemy_data,"cleared":cleared_room,"supreme":player.supreme,"mana":player.mana,"events":room_events.duplicate()}
+	progress.d.run={"dungeon":dungeon,"room":room,"hp":player.hp,"x":player.position.x,"y":player.position.y,"potions":potions,"loot":loot.duplicate(true),"enemies":enemy_data,"cleared":cleared_room,"supreme":player.supreme,"mana":player.mana,"events":room_events.duplicate(),"boons":run_boons.duplicate(),"route_step":route_step,"route_risk_next":route_risk_next,"room_risk":room_risk,"boon_offers":boon_offers.duplicate(),"boon_reroll_used":boon_reroll_used,"contract":active_contract,"contract_elapsed":contract_elapsed,"contract_potions_used":contract_potions_used,"contract_elite_kills":contract_elite_kills,"contract_failed":contract_failed,"synergy_cd":synergy_cd}
 	if not progress.save():progress.d.run=old_run;toast("Não foi possível salvar a expedição.");return false
 	return true
 
@@ -588,12 +777,39 @@ func show_buildings() -> void:
 		var key=keys[i];var n=int(progress.d.hub[key]);var y=145+i*83
 		label("%s  •  Nível %d\n%s"%[names[i],n,descriptions[i]],Vector2(119,y),Vector2(710,75),19)
 		button("MÁXIMO" if n>=3 else "%d ouro / %d minério / 1 Cinza\nMELHORAR"%[250 if n==1 else 700,20 if n==1 else 50],Vector2(854,y),Vector2(298,65),upgrade_building.bind(key),n>=3)
+	button("PROJETOS DO REFÚGIO",Vector2(145,625),Vector2(430,55),show_camp_projects)
 	button("VOLTAR / X",Vector2(850,625),Vector2(300,55),show_hub)
+
+func show_camp_projects() -> void:
+	clear_ui();screen="camp_projects";panel(Vector2(80,20),Vector2(1120,682));title("PROJETOS DO REFÚGIO","Resgatados: %d / 5   •   Projetos construídos: %d / 4"%[progress.d.get("camp_survivors",[]).size(),progress.d.get("camp_projects",[]).size()])
+	var ids=["supply_cache","hunter_lodge","scribe_table","ember_ward"]
+	var names=["Despensa de campanha","Tenda dos caçadores","Mesa de cartografia","Ala da Última Chama"]
+	var desc=["+1 poção no início de cada expedição.","+10% de ouro e minério por inimigo derrotado.","Permite refazer uma oferta de bênção por expedição.","+8% de vida máxima durante as expedições."]
+	var resident_names=["Tomas, sineiro","Nara, guia dos canais","Elin, vidreira","Mara, cartógrafa","Arven, guardião dos nomes"]
+	var unlocks=[3,6,9,12];var gold=[200,350,500,650];var ore=[15,24,35,45]
+	for i in range(ids.size()):
+		var id=ids[i];var y=142+i*101;var built=project_built(id);var unlocked=progress.unlocked()>=unlocks[i]
+		var resident=""
+		if i<progress.d.get("camp_survivors",[]).size():resident="  •  %s está no refúgio"%resident_names[i]
+		label("%s%s\n%s%s"%[names[i],"  •  CONSTRUÍDO" if built else "",desc[i],resident],Vector2(117,y),Vector2(700,82),18)
+		var action_text="CONSTRUÍDO" if built else ("DESBLOQUEIA EM %d VITÓRIAS"%unlocks[i] if not unlocked else "%d ouro / %d minério\nCONSTRUIR"%[gold[i],ore[i]])
+		button(action_text,Vector2(858,y+3),Vector2(286,68),build_camp_project.bind(id),built or not unlocked)
+	var survivors=progress.d.get("camp_survivors",[])
+	var names_by_id={"tomas_bellkeeper":"Tomas","nara_channel_guide":"Nara","elin_glasswright":"Elin","mara_dunecartographer":"Mara","arven_namekeeper":"Arven"}
+	var saved_names=[]
+	for id in survivors:saved_names.append(str(names_by_id.get(str(id),str(id))))
+	label("Sobreviventes acolhidos: "+(" • ".join(PackedStringArray(saved_names)) if not saved_names.is_empty() else "nenhum ainda"),Vector2(116,553),Vector2(1000,32),16,Color("c5b795"))
+	button("VOLTAR ÀS OFICINAS",Vector2(145,625),Vector2(430,55),show_buildings)
+	button("VOLTAR AO REFÚGIO",Vector2(850,625),Vector2(300,55),show_hub)
+
+func build_camp_project(id: String) -> void:
+	if progress.build_camp_project(id):show_camp_projects();toast("Projeto construído. O novo benefício já está ativo.",3)
+	else:toast("Ainda faltam recursos ou vitórias para liberar esse projeto.")
 
 func show_heroes() -> void:
 	clear_ui();screen="heroes";panel(Vector2(65,20),Vector2(1150,680));title("PORTADORES DE BRASA","Experiência individual; campanha e recursos compartilhados.")
 	var ids=["varek","maela","neris"]
-	var desc=["Guardião da Forja\nEspada/escudo ou martelo\nTécnicas de impacto e proteção","Tecelã de Cinzas\nCajado ou foco\nMagia, mana e controle em área","Vigia dos Caminhos\nLâminas ou arco\nMobilidade, projéteis e flanco"]
+	var desc=["Guardião da Forja\nEspada/escudo ou martelo\nImpacto e proteção\nSinergia com Maela: brasa de acompanhamento","Tecelã de Cinzas\nCajado ou foco\nMagia, mana e controle em área\nSinergia com Varek: quebra de postura","Vigia dos Caminhos\nLâminas ou arco\nMobilidade e flanco\nSinergia com Maela: marca arcana"]
 	for i in range(3):
 		var id=ids[i];var req=[0,3,6][i];var x=90+i*386
 		label(id.capitalize(),Vector2(x,158),Vector2(350,40),30,Color("efd39b"))
@@ -681,7 +897,12 @@ func _physics_process(delta: float) -> void:
 	if toast_timer<=0:toast_label.text=""
 	step_timer=maxf(0,step_timer-delta)
 	guard_charge=maxf(0,guard_charge-delta);resource_cd=maxf(0,resource_cd-delta)
+	synergy_cd=maxf(0,synergy_cd-delta)
 	if screen=="combat":
+		if active_contract!="" and not contract_failed:
+			contract_elapsed+=delta
+			if active_contract=="swift_path" and contract_elapsed>420:
+				contract_failed=true;toast("Contrato expirou. A expedição ainda pode ser concluída.",3)
 		var keys=Vector2(float(Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT))-float(Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT)),float(Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN))-float(Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP)))
 		move_axis=controls.axis if controls.axis.length()>.1 else keys.normalized()
 		if hit_stop>0:
@@ -699,7 +920,7 @@ func _physics_process(delta: float) -> void:
 		if not cleared_room and enemies.all(func(a):return a.hp<=0):
 			cleared_room=true
 			if room==4:finish_dungeon();return
-			save_run();combat_ui();toast("Sala liberada. Avance ou deposite o saque e retorne.",4)
+			route_step="choose";save_run();combat_ui()
 		var zoom=float(progress.d.settings.zoom)
 		if room==4:zoom=minf(zoom,1.15)
 		camera.zoom=Vector2(zoom,zoom)

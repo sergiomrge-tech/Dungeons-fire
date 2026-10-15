@@ -1,0 +1,12 @@
+{
+  "boons": [
+    {"id":"ember_edge","name":"Fio de Brasa","description":"Ataques causam +12% de dano.","attack_mult":0.12},
+    {"id":"iron_bark","name":"Casca de Ferro","description":"+5 defesa e +8% de vida máxima.","defense_add":5,"hp_mult":0.08},
+    {"id":"swift_ashes","name":"Cinzas Velozes","description":"Esquiva recarrega 18% mais rápido.","dodge_cd_mult":0.18},
+    {"id":"arcane_focus","name":"Foco Arcano","description":"Habilidades causam +20% de dano.","skill_mult":0.20},
+    {"id":"soul_siphon","name":"Sifão de Almas","description":"Recupera 2% da vida ao acertar uma habilidade.","heal_fraction":0.02},
+    {"id":"hunter_sigil","name":"Selo do Caçador","description":"Causa +20% de dano a elites e chefes.","elite_damage":0.20},
+    {"id":"long_breath","name":"Fôlego Longo","description":"Técnicas recarregam 12% mais rápido.","skill_cd_mult":0.12},
+    {"id":"breaker_mark","name":"Marca do Rompedor","description":"Acertos aumentam em 25% a quebra de postura.","stagger_mult":0.25}
+  ]
+}

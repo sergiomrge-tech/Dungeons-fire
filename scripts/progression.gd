@@ -13,7 +13,7 @@ func _init(content: DFContent, save_path: String = "user://dungeons_fires_save.j
 	d = fresh()
 
 func fresh() -> Dictionary:
-	return {"version":VERSION,"gold":160,"ore":12,"cloth":4,"ash":0,"cores":{},"recipes":[],"hero":"varek","cleared":[],"inventory":["W_sword_0","W_staff_0","W_bow_0","A_body_0","A_boots_0","T_0"],"upgrades":{},"equipped":{"weapon":"W_sword_0","head":"","body":"A_body_0","boots":"A_boots_0","talisman":"T_0","relic":""},"heroes":{"varek":{"level":1,"xp":0,"talents":0},"maela":{"level":1,"xp":0,"talents":0},"neris":{"level":1,"xp":0,"talents":0}},"hub":{"forge":1,"sanctuary":1,"botica":1,"archive":1,"barracks":1},"settings":{"sound":true,"shake":true,"story_mode":false,"zoom":1.0},"run":{},"tutorial":false}
+	return {"version":VERSION,"gold":160,"ore":12,"cloth":4,"ash":0,"cores":{},"recipes":[],"hero":"varek","cleared":[],"inventory":["W_sword_0","W_staff_0","W_bow_0","A_body_0","A_boots_0","T_0"],"upgrades":{},"equipped":{"weapon":"W_sword_0","head":"","body":"A_body_0","boots":"A_boots_0","talisman":"T_0","relic":""},"heroes":{"varek":{"level":1,"xp":0,"talents":0},"maela":{"level":1,"xp":0,"talents":0},"neris":{"level":1,"xp":0,"talents":0}},"hub":{"forge":1,"sanctuary":1,"botica":1,"archive":1,"barracks":1},"settings":{"sound":true,"shake":true,"story_mode":false,"zoom":1.0},"camp_projects":[],"camp_survivors":[],"contract_selected":"","run":{},"tutorial":false}
 
 func valid(value) -> bool:
 	if not value is Dictionary or int(value.get("version",0)) != VERSION:
@@ -24,6 +24,9 @@ func valid(value) -> bool:
 	for k in ["cores","upgrades","equipped","heroes","hub","settings","run"]:
 		if not value.get(k) is Dictionary:
 			return false
+	if value.has("camp_projects") and not value.camp_projects is Array: return false
+	if value.has("camp_survivors") and not value.camp_survivors is Array: return false
+	if value.has("contract_selected") and not value.contract_selected is String: return false
 	if not value.get("inventory") is Array or not value.get("cleared") is Array or not value.hero in ["varek","maela","neris"]:
 		return false
 	for id in value.inventory:
@@ -48,9 +51,19 @@ func load_save() -> bool:
 			var value = parser.data
 			if valid(value):
 				d = value
+				migrate_new_systems()
 				migrate_recipes()
 				return true
 	return false
+
+func migrate_new_systems() -> void:
+	if not d.get("camp_projects") is Array: d.camp_projects = []
+	if not d.get("camp_survivors") is Array: d.camp_survivors = []
+	if not d.get("contract_selected") is String: d.contract_selected = ""
+	if not d.run.is_empty():
+		for key in ["boons", "route_step", "route_risk_next", "room_risk", "boon_offers", "boon_reroll_used", "contract", "contract_elapsed", "contract_potions_used", "contract_elite_kills", "contract_failed", "synergy_cd"]:
+			if not d.run.has(key):
+				d.run[key] = [] if key in ["boons", "boon_offers"] else ("" if key in ["route_step", "contract"] else (false if key in ["route_risk_next", "room_risk", "boon_reroll_used", "contract_failed"] else 0.0))
 
 func migrate_recipes() -> void:
 	if not d.get("recipes") is Array:d.recipes=[]
@@ -169,6 +182,21 @@ func upgrade_hub(key: String) -> bool:
 	if not save(): d = old; return false
 	return true
 
+func build_camp_project(id: String) -> bool:
+	var projects = {
+		"supply_cache":{"unlock":3,"gold":200,"ore":15},
+		"hunter_lodge":{"unlock":6,"gold":350,"ore":24},
+		"scribe_table":{"unlock":9,"gold":500,"ore":35},
+		"ember_ward":{"unlock":12,"gold":650,"ore":45}
+	}
+	if not projects.has(id) or d.camp_projects.has(id): return false
+	var project: Dictionary = projects[id]
+	if unlocked() < int(project.unlock) or d.gold < int(project.gold) or d.ore < int(project.ore): return false
+	var old = d.duplicate(true)
+	d.gold -= int(project.gold); d.ore -= int(project.ore); d.camp_projects.append(id)
+	if not save(): d = old; return false
+	return true
+
 func complete(index: int, loot: Dictionary) -> Dictionary:
 	var def = db.dungeons[index]
 	var old = d.duplicate(true)
@@ -189,6 +217,10 @@ func complete(index: int, loot: Dictionary) -> Dictionary:
 		d.cleared.append(index)
 		# Six ash per chapter pays for the five first building upgrades.
 		d.ash += 6 if def.guardian else 1
+		if index % 3 == 2:
+			var survivor_ids = ["tomas_bellkeeper", "nara_channel_guide", "elin_glasswright", "mara_dunecartographer", "arven_namekeeper"]
+			var survivor_id = survivor_ids[int(index / 3)]
+			if not d.camp_survivors.has(survivor_id): d.camp_survivors.append(survivor_id)
 	if def.guardian:
 		d.cores[def.material] = int(d.cores.get(def.material,0))+1
 		migrate_recipes()

@@ -42,10 +42,14 @@ var id: int = 0
 var pending_attack: bool = false
 var atlas: Texture2D
 var size_scale: float = 1.35
+var mob_profile: Dictionary = {}
+var marked: float = 0
+var route_reward: bool = false
 
-func setup(owner_game, actor_kind: String, player: bool, life: float, damage: float, boss_actor: bool = false) -> void:
+func setup(owner_game, actor_kind: String, player: bool, life: float, damage: float, boss_actor: bool = false, mob_data: Dictionary = {}) -> void:
 	game = owner_game; kind = actor_kind; is_player = player; boss = boss_actor
 	hp = life; max_hp = life; attack_power = damage
+	mob_profile = mob_data.duplicate(true)
 	atlas = load("res://assets/%s.png" % kind)
 	size_scale = 1.85 if boss else (1.35 if is_player else 1.25)
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -74,7 +78,7 @@ func request_attack() -> void:
 func request_dodge() -> void:
 	if hp<=0 or dodge_cd>0 or not state in ["idle","run","attack"]: return
 	start_action("dodge","dodge",.28)
-	invuln = .20; dodge_cd = .85
+	invuln = .20; dodge_cd = .85*(1.0-game.run_boon_total("dodge_cd_mult"))
 	direction = game.move_axis if game.move_axis.length()>.1 else Vector2(facing,0)
 	direction = direction.normalized()
 	pending_attack = false
@@ -85,7 +89,8 @@ func request_skill(slot: int) -> void:
 		game.toast("Mana insuficiente; ela recupera com o tempo.")
 		return
 	if kind=="maela": mana-=25
-	skill_cd[slot] = 5.0 if slot==0 else 9.0
+	var cooldown_scale = 1.0 - game.run_boon_total("skill_cd_mult")
+	skill_cd[slot] = (5.0 if slot==0 else 9.0) * cooldown_scale
 	if kind=="varek" and slot==1:
 		start_action("guard","guard",.85);guard_age=0;velocity=Vector2.ZERO
 		game.play_sfx("shield");return
@@ -104,6 +109,7 @@ func tick(delta: float) -> void:
 	hit_flash=maxf(0,hit_flash-delta)
 	recoil_offset=recoil_offset.lerp(Vector2.ZERO,minf(1,delta*18))
 	combo_window=maxf(0,combo_window-delta)
+	marked=maxf(0,marked-delta)
 	if boss and kind=="garron" and boss_phase==1 and hp>0 and hp<=max_hp*.55:
 		boss_phase=2;boss_profile={};start_action("roar","roar",1.1);cooldown=1.2
 		game.toast("Garron • Fase II: investidas mais rápidas. Ataque após o impacto.",4)
@@ -118,6 +124,13 @@ func tick(delta: float) -> void:
 	if state in ["attack","cast","dodge","hurt","windup","guard","recover","roar"]:
 		timer -= delta
 		if state=="dodge": position=game.move_actor(position,direction*530*delta)
+		if not is_player and mob_profile.get("special", "") == "leap" and state == "attack" and not rush_hit:
+			var pounce = (aim-position).normalized()
+			position = game.move_actor(position, pounce * 390 * delta)
+			if game.player.position.distance_to(position) < 48:
+				rush_hit = true
+				game.player.hurt(attack_power, Vector2(pounce.x*20,-3), position)
+				game.world.fx(position-Vector2(0,22),52,Color("ef8650"),.34)
 		if state=="guard":guard_age+=delta
 		if is_player and state=="cast" and kind=="varek" and attack_kind=="skill0" and timer>duration*.50:
 			position=game.move_actor(position,Vector2(facing*270,0)*delta)
@@ -130,7 +143,7 @@ func tick(delta: float) -> void:
 		elif state in ["attack","cast"] and not swing_done and timer<duration*.55:
 			swing_done = true
 			if is_player: game.player_strike(self,attack_kind)
-			else: game.enemy_strike(self)
+			elif mob_profile.get("special", "") != "leap": game.enemy_strike(self)
 		if timer<=0:
 			if boss and state=="attack" and not boss_profile.is_empty():
 				start_action("recover","recover",boss_profile.recovery);cooldown=maxf(cooldown,timer+.25)
@@ -150,7 +163,7 @@ func tick_player(delta: float) -> void:
 	state = "run" if axis.length()>.1 else "idle"
 	if axis.length()>.1:
 		if absf(axis.x)>.1: facing = 1 if axis.x>0 else -1
-		velocity=velocity.move_toward(Vector2(axis.x,axis.y*.70)*285,delta*2400)
+		velocity=velocity.move_toward(Vector2(axis.x,axis.y*.70)*285*(.70 if slowed>0 else 1.0),delta*2400)
 		position=game.move_actor(position,velocity*delta)
 		if int(anim_clock*7)%4==0 and game.step_timer<=0:
 			game.step_timer=.23; game.play_sfx("step")
@@ -163,15 +176,15 @@ func tick_enemy(delta: float) -> void:
 	if game.player==null or game.player.hp<=0: return
 	var diff: Vector2 = game.player.position-position
 	facing = 1 if diff.x>=0 else -1
-	var ranged = kind in ["archer","sereia","severan"]
-	var reach = 115.0 if boss else 77.0
-	if ranged: reach = 370
+	var ranged = bool(mob_profile.get("ranged",kind in ["archer","sereia","severan"]))
+	var reach = float(mob_profile.get("reach",115.0 if boss else 77.0))
+	if ranged: reach = maxf(reach,220)
 	if absf(diff.x)<reach and absf(diff.y)<45 and cooldown<=0 and game.windup_count()<3:
 		aim = game.player.position
 		if boss and kind in ["garron","brute"]:
 			boss_profile=DFBossPatterns.profile(kind,boss_phase,boss_step,position,aim,facing);boss_step+=1
 			start_action("windup","enemy",boss_profile.windup)
-		else:start_action("windup","enemy",.70 if not boss else 1.0)
+		else:start_action("windup","enemy",float(mob_profile.get("windup",.70 if not boss else 1.0)))
 		cooldown = (1.5 if not boss else 1.7)+float(id%3)*.15
 	else:
 		var target = diff
@@ -179,7 +192,7 @@ func tick_enemy(delta: float) -> void:
 		if absf(diff.x)<reach and absf(diff.y)<28: target = Vector2.ZERO
 		state = "run" if target.length()>5 else "idle"
 		if target.length()>5:
-			var speed = (65.0 if boss else 94.0) * (.55 if slowed>0 else 1.0)
+			var speed = (65.0 if boss else float(mob_profile.get("speed",94.0))) * (.55 if slowed>0 else 1.0)
 			var nav=game.room_layout.direction(position,position+target)
 			position=game.move_actor(position,Vector2(nav.x,nav.y*.8)*speed*delta)
 
@@ -194,6 +207,10 @@ func hurt(amount: float, push: Vector2 = Vector2.ZERO, source: Vector2 = Vector2
 			return false
 		amount*=.2
 	var received = maxf(1,amount*100/(100+defense))
+	if not is_player and kind=="bone_sentinel" and mob_profile.get("special", "")=="frontal_guard" and state not in ["attack","recover","hurt"] and source!=Vector2.INF and (source.x-position.x)*facing>=-8:
+		received *= .48
+	if not is_player and marked>0:
+		received *= 1.18
 	if is_player and game.relic_effect()=="resist":received*=.9
 	if is_player and game.progress.d.settings.story_mode: received *= .6
 	hp = maxf(0,hp-received)
@@ -219,7 +236,7 @@ func hurt(amount: float, push: Vector2 = Vector2.ZERO, source: Vector2 = Vector2
 	return true
 
 func snapshot() -> Dictionary:
-	return {"id":id,"kind":kind,"boss":boss,"hp":hp,"max_hp":max_hp,"attack":attack_power,"x":position.x,"y":position.y,"facing":facing,"boss_phase":boss_phase,"boss_step":boss_step,"elite":elite}
+	return {"id":id,"kind":kind,"boss":boss,"hp":hp,"max_hp":max_hp,"attack":attack_power,"x":position.x,"y":position.y,"facing":facing,"boss_phase":boss_phase,"boss_step":boss_step,"elite":elite,"route_reward":route_reward,"marked":marked,"slowed":slowed}
 
 func _draw() -> void:
 	if atlas==null: return
@@ -235,10 +252,16 @@ func _draw() -> void:
 		draw_arc(Vector2(0,-56),62,0,TAU,36,Color(1,.77,.29,.55),2,true)
 	if elite:
 		draw_arc(Vector2.ZERO,33,0,TAU,32,Color(.9,.63,1,.6),2)
+	if marked>0 and hp>0:
+		draw_arc(Vector2(0,-46),30,anim_clock*2,anim_clock*2+PI*1.6,28,Color(.77,.58,1,.72),2.4,true)
 	if state=="windup" and boss_profile.is_empty():
 		var warn = Color(1,.36,.17,.45+sin(anim_clock*14)*.15)
 		draw_arc(Vector2.ZERO,60 if boss else 43,0,TAU,32,warn,4)
 		draw_line(Vector2.ZERO,(aim-position).normalized()*95,warn,4)
+	var aura_colors={"ash_hound":Color("ff9d48"),"bell_wraith":Color("7bdcff"),"bone_sentinel":Color("d4e4f4"),"cinder_acolyte":Color("ff784b"),"glass_stalker":Color("c384ff")}
+	if aura_colors.has(kind) and hp>0:
+		var aura: Color=aura_colors[kind];aura.a=.12+.06*sin(anim_clock*5)
+		draw_circle(Vector2(0,-54),15+sin(anim_clock*4)*2,aura)
 	var frame = visual_frame()
 	var tint = Color(1.55,1.35,1.10) if hit_flash>0 else Color.WHITE
 	if invuln>0 and state=="hurt" and hit_flash<=0: tint=Color(1,.6,.55)
@@ -254,9 +277,15 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO)
 	if not is_player and hp>0 and game.screen=="combat":
 		var w = 85 if boss else 54
-		draw_rect(Rect2(-w/2.0-1,-96*size_scale-1,w+2,7),Color("304660"))
-		draw_rect(Rect2(-w/2.0,-96*size_scale,w,5),Color("e8eaf0"))
-		draw_rect(Rect2(-w/2.0,-96*size_scale,w*hp/max_hp,5),Color("ce5b70"))
+		var bar_y=-96*size_scale
+		draw_rect(Rect2(-w/2.0-1,bar_y-1,w+2,7),Color("304660"))
+		draw_rect(Rect2(-w/2.0,bar_y,w,5),Color("e8eaf0"))
+		draw_rect(Rect2(-w/2.0,bar_y,w*hp/max_hp,5),Color("ce5b70"))
+		if kind in ["ash_hound","bell_wraith","bone_sentinel","cinder_acolyte","glass_stalker"] or elite:
+			var name=str(mob_profile.get("name",kind.capitalize()))
+			var text_width=game.world.font.get_string_size(name,HORIZONTAL_ALIGNMENT_LEFT,-1,11).x
+			draw_string_outline(game.world.font,Vector2(-text_width/2,bar_y-8),name,HORIZONTAL_ALIGNMENT_LEFT,-1,11,3,Color("241e18"))
+			draw_string(game.world.font,Vector2(-text_width/2,bar_y-8),name,HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("f3e3c0"))
 
 func pose_transform() -> Dictionary:
 	var offset=Vector2(0,sin(anim_clock*3)*.7)
