@@ -2,12 +2,12 @@ name: Build Android preview APK
 on:
   push:
     branches:
-      - build/android-preview-v0.3
+      - build/android-visual-v0.3.1
     paths:
       - '.github/workflows/android-preview.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: dungeons-android-preview-${{ github.ref }}
   cancel-in-progress: true
@@ -66,10 +66,15 @@ jobs:
           f=Path('export_presets.cfg')
           s=f.read_text()
           assert 'package/unique_name="com.sergiomrge.dungeonsfires"' in s
-          s=s.replace('package/unique_name="com.sergiomrge.dungeonsfires"','package/unique_name="com.sergiomrge.dungeonsfires.preview"')
-          s=s.replace('package/name="Dungeons Fires"','package/name="Dungeons Fires Preview"')
+          s=s.replace('package/unique_name="com.sergiomrge.dungeonsfires"','package/unique_name="com.sergiomrge.dungeonsfires.preview.v031"')
+          s=s.replace('package/name="Dungeons Fires"','package/name="Dungeons Fires Preview 0.3.1"')
           s=s.replace('package/signed=false','package/signed=true')
+          s=s.replace('version/code=300','version/code=301').replace('version/name="0.3.0"','version/name="0.3.1"')
           f.write_text(s)
+          settings=project.read_text().replace('config/version="0.3.0"','config/version="0.3.1"')
+          project.write_text(settings)
+          game=Path('scripts/game.gd')
+          game.write_text(game.read_text().replace('v0.3.0 •','v0.3.1 •'))
           PY
       - name: Import assets and validate GDScript
         run: |
@@ -85,21 +90,40 @@ jobs:
           set -euo pipefail
           cp "$HOME/.android/dungeons_preview.keystore" "$GODOT_ANDROID_KEYSTORE_DEBUG_PATH"
           mkdir -p /tmp/preview
-          Godot_v4.6.1-stable_linux.x86_64 --headless --export-debug Android /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
-          test -s /tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
+          Godot_v4.6.1-stable_linux.x86_64 --headless --export-debug Android /tmp/preview/Dungeons_Fires_v0_3_1_preview.apk
+          test -s /tmp/preview/Dungeons_Fires_v0_3_1_preview.apk
       - name: Verify APK integrity and signature
         run: |
           set -euo pipefail
-          APK=/tmp/preview/Dungeons_Fires_v0_3_0_preview.apk
+          APK=/tmp/preview/Dungeons_Fires_v0_3_1_preview.apk
           unzip -t "$APK" | tail -n 2
           "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$APK" | head -n 3
+          "$ANDROID_HOME/build-tools/35.0.1/zipalign" -c -P 16 -v 4 "$APK" > /tmp/preview-alignment.txt
+          tail -n 1 /tmp/preview-alignment.txt
+          "$ANDROID_HOME/build-tools/35.0.1/aapt" dump badging "$APK" > /tmp/preview-badging.txt
+          sed -n '1,3p' /tmp/preview-badging.txt
+          grep -F "com.sergiomrge.dungeonsfires.preview.v031" /tmp/preview-badging.txt
+          grep -F "versionName='0.3.1'" /tmp/preview-badging.txt
           sha256sum "$APK" | tee /tmp/preview/sha256.txt
           echo "Preview uses an isolated ephemeral debug certificate and distinct Android application ID. It can coexist with the signed v0.1.0. Keys are never committed." > /tmp/preview/README.txt
       - name: Upload Android APK preview
         uses: actions/upload-artifact@v4
         with:
-          name: Dungeons-Fires-Android-v030-preview
+          name: Dungeons-Fires-Android-v031-preview
           path: /tmp/preview/*
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish APK with a direct download link
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd /tmp/preview
+          sha256sum -c sha256.txt
+          gh release create v0.3.1-preview \
+            Dungeons_Fires_v0_3_1_preview.apk sha256.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Dungeons Fires v0.3.1 — Visual atualizado" \
+            --notes "APK Android arm64 com a nova arte fantasia, HUD corrigido, recortes dos personagens ajustados e melhorias da v0.3. Gerado a partir do código desta branch, com integridade, assinatura e alinhamento verificados. App independente Dungeons Fires Preview 0.3.1; pode coexistir com versões anteriores. Não testado em aparelho físico." \
+            --prerelease --target "$GITHUB_SHA" --latest=false
