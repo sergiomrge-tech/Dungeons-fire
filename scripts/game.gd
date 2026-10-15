@@ -711,7 +711,8 @@ func _physics_process(delta: float) -> void:
 		if save_timer>2:save_timer=0;save_run()
 	else:
 		world.clock+=delta;world.queue_redraw()
-		for a in actors.get_children():a.anim_clock+=delta;a.queue_redraw()
+		for a in actors.get_children():
+			if a is DFActor:a.anim_clock+=delta;a.queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and not event.echo:

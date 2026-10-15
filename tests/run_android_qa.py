@@ -1,5 +1,5 @@
 """Drive installed QA build through Android lifecycle; retain runtime evidence."""
-import json, subprocess, time
+import json, subprocess, time, re
 from pathlib import Path
 pkg='com.sergiomrge.dungeonsfires.qa.v050'
 out=Path('/tmp/android-runtime');out.mkdir(exist_ok=True)
@@ -34,4 +34,6 @@ try:
  (out/'03_resumed.png').write_bytes(adb('exec-out','screencap','-p'))
  print(json.dumps({'android_api':29,'runtime':first,'pause':paused['checks'],'restart':resumed['checks']}))
 finally:
- (out/'logcat.txt').write_bytes(adb('logcat','-d',check=False))
+ log=adb('logcat','-d',check=False)
+ (out/'logcat.txt').write_bytes(log)
+ assert not re.search(rb'(SCRIPT ERROR|E godot\s*: ERROR:|FATAL EXCEPTION)',log), 'Godot/Android runtime error found in retained logcat'

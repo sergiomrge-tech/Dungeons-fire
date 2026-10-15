@@ -8,7 +8,7 @@ func write_report() -> void:
 	var f=FileAccess.open("user://android_qa.json",FileAccess.WRITE)
 	f.store_string(JSON.stringify(report));f.flush();f.close()
 func touch(id: int, pos: Vector2, pressed: bool) -> void:
-	var e=InputEventScreenTouch.new();e.index=id;e.position=game.get_viewport().get_screen_transform()*pos;e.pressed=pressed;Input.parse_input_event(e)
+	var e=InputEventScreenTouch.new();e.index=id;e.position=game.get_viewport().get_screen_transform()*pos;e.pressed=pressed;Input.parse_input_event(e);Input.flush_buffered_events()
 func _process(delta: float) -> void:
 	if measuring:frames.append(delta)
 func _notification(what: int) -> void:
@@ -17,6 +17,14 @@ func record_pause() -> void:
 	report.checks.pause_clears_controls=not game.controls.active and game.controls.axis==Vector2.ZERO and not game.attack_held
 	report.checks.pause_screen=game.screen=="pause"
 	report.stage="paused";write_report()
+func frame_has_gameplay() -> bool:
+	var img=game.get_viewport().get_texture().get_image()
+	if img==null or img.get_width()<1:return false
+	var colors={}
+	for x in range(32):
+		for y in range(18):colors[img.get_pixel(mini(img.get_width()-1,int((x+.5)*img.get_width()/32)),mini(img.get_height()-1,int((y+.5)*img.get_height()/18))).to_html(false)]=true
+	return colors.size()>64
+
 func _ready() -> void:
 	game=get_parent();await get_tree().create_timer(2).timeout
 	if FileAccess.file_exists("user://android_checkpoint.json"):
@@ -27,6 +35,8 @@ func _ready() -> void:
 		report.checks.resume_chest=game.room_events.has("MINE_CHEST_02") and game.world.chest_nodes.MINE_CHEST_02.cell==1
 		report.checks.resume_loot=game.loot.gold==30 and game.loot.ore==4
 		report.checks.resume_camera=game.camera.zoom.x<=1.3
+		await RenderingServer.frame_post_draw
+		report.checks.resumed_frame_not_blank=frame_has_gameplay()
 		report.stage="complete";write_report();game.show_pause();return
 	game.progress.d=game.progress.fresh();game.progress.d.settings.sound=false;game.start_dungeon(0)
 	var start=game.player.position
@@ -49,5 +59,7 @@ func _ready() -> void:
 	game.set_physics_process(false);game.room=2;game.spawn_room();game.player.position=Vector2(650,520);game.interact_chest()
 	game.player.hp=73;game.potions=1;game.player.mana=47;game.save_run()
 	var checkpoint=FileAccess.open("user://android_checkpoint.json",FileAccess.WRITE);checkpoint.store_string("ready");checkpoint.close()
+	await RenderingServer.frame_post_draw
+	report.checks.gameplay_frame_not_blank=frame_has_gameplay()
 	report.checks.chest_opened=game.room_events.has("MINE_CHEST_02")
 	report.stage="checkpoint";write_report()

@@ -78,7 +78,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tests/audit_project.py
-          for suite in test_game test_first_region_v05 test_combat_bot test_living_hub_v03 test_classic_ui test_visual_assets; do
+          for suite in test_game test_first_region_v05 test_combat_bot test_living_hub_v03 test_classic_ui test_visual_assets test_touch_pipeline; do
             Godot_v4.6.1-stable_linux.x86_64 --headless --script tests/$suite.gd -- --qa 2>&1 | tee /tmp/native-$suite.txt
             if grep -E 'SCRIPT ERROR|ERROR:' /tmp/native-$suite.txt; then exit 1; fi
           done
@@ -147,7 +147,7 @@ jobs:
           arch: x86_64
           ram-size: 2048M
           disk-size: 4096M
-          emulator-options: -skin 1280x720 -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -skin 1280x720 -no-window -gpu swangle -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: python3 tests/run_android_qa.py
       - name: Retain Android runtime evidence

@@ -31,7 +31,7 @@ func run() -> void:
 	var gold=game.loot.gold;game.interact_chest()
 	check(game.loot.gold==gold+30 and game.room_events.has("MINE_CHEST_02"),"chest grants resources once")
 	game.interact_chest();check(game.loot.gold==gold+30,"double touch does not duplicate chest")
-	game.show_pause();game.resume_run();hero=game.player
+	game.show_pause();game._physics_process(.017);game.resume_run();hero=game.player
 	check(game.room_events.has("MINE_CHEST_02") and game.loot.gold==gold+30,"chest remains opened after resume")
 	check(game.world.chest_nodes.MINE_CHEST_02.cell==1,"opened chest visual follows save")
 	game.room=3;hero.hp=50;game.spawn_room()

@@ -65,6 +65,11 @@ jobs:
           set -o pipefail
           Godot_v4.6.1-stable_linux.x86_64 --headless --script tests/test_first_region_v05.gd -- --qa 2>&1 | tee /tmp/df-region.log
           if grep -E 'SCRIPT ERROR|ERROR:' /tmp/df-region.log; then exit 1; fi
+      - name: Test scaled input through actual viewport pipeline
+        run: |
+          set -o pipefail
+          Godot_v4.6.1-stable_linux.x86_64 --headless --script tests/test_touch_pipeline.gd -- --qa 2>&1 | tee /tmp/df-touch.log
+          if grep -E 'SCRIPT ERROR|ERROR:' /tmp/df-touch.log; then exit 1; fi
       - name: Pack clean independent source
         run: git archive --format=zip --prefix=Dungeons_Fires_Godot_v0_5_0/ HEAD -o /tmp/Dungeons_Fires_Godot_v0_5_0.zip
       - uses: actions/upload-artifact@v4
