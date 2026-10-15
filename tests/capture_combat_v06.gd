@@ -41,7 +41,7 @@ func record_hero(kind: String) -> void:
 		if i==(49 if kind=="varek" else 56):assert(img.save_png(output_dir.path_join(kind+"_skill.png"))==OK)
 		if i==96:assert(img.save_png(output_dir.path_join(kind+"_supreme.png"))==OK)
 	print("VFX_CAPTURED: "+kind)
-func verify_lighting() -> void:
+func verify_lighting() -> bool:
 	prepare("varek");game.world.vfx.emit("charge",game.player.position-Vector2(0,60),Color("ffa34a"),110,.5,1,0,.5);game.world.vfx.tick(.1)
 	for i in range(3):await process_frame
 	var lit=await frame()
@@ -53,10 +53,12 @@ func verify_lighting() -> void:
 		for y in range(410,500,6):
 			var a=lit.get_pixel(x,y);var b=unlit.get_pixel(x,y)
 			difference+=absf(a.r-b.r)+absf(a.g-b.g)+absf(a.b-b.b)
-	assert(difference>1.0,"Native PointLight2D must change actual background/actor framebuffer pixels")
 	print("NATIVE_LIGHT_PIXEL_DIFFERENCE: "+str(difference))
 	assert(lit.save_png(output_dir.path_join("native_light_on.png"))==OK)
 	assert(unlit.save_png(output_dir.path_join("native_light_off.png"))==OK)
+	if difference<=1.0:
+		push_error("Native PointLight2D must change actual background/actor framebuffer pixels");return false
+	return true
 func record_boss() -> void:
 	game.start_dungeon(2);game.room=4;game.spawn_room();game.combat_ui()
 	game.player.position=Vector2(790,480)
@@ -71,7 +73,7 @@ func run() -> void:
 	DirAccess.make_dir_recursive_absolute(output_dir)
 	game=load("res://scenes/main.tscn").instantiate();root.add_child(game);await process_frame;game.set_physics_process(false)
 	game.progress=DFProgress.new(DFContent.new(),"user://combat_capture_v06.json")
-	await verify_lighting()
+	if not await verify_lighting():quit(1);return
 	for hero in ["varek","maela","neris"]:await record_hero(hero)
 	await record_boss()
 	game.queue_free();await process_frame;quit()

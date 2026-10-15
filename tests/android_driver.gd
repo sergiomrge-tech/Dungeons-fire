@@ -28,12 +28,13 @@ func frame_has_gameplay() -> bool:
 func _ready() -> void:
 	game=get_parent();await get_tree().create_timer(2).timeout
 	if FileAccess.file_exists("user://android_checkpoint.json"):
+		var expected=JSON.parse_string(FileAccess.get_file_as_string("user://android_checkpoint.json"))
 		game.resume_run()
 		report.checks.resume_room=game.room==2
 		report.checks.resume_health=is_equal_approx(game.player.hp,73.0)
 		report.checks.resume_potions=game.potions==1
 		report.checks.resume_chest=game.room_events.has("MINE_CHEST_02") and game.world.chest_nodes.MINE_CHEST_02.cell==1
-		report.checks.resume_loot=game.loot.gold==30 and game.loot.ore==4
+		report.checks.resume_loot=game.loot.gold==expected.loot.gold and game.loot.ore==expected.loot.ore
 		report.checks.resume_camera=game.camera.zoom.x<=1.3
 		await RenderingServer.frame_post_draw
 		report.checks.resumed_frame_not_blank=frame_has_gameplay()
@@ -61,7 +62,7 @@ func _ready() -> void:
 	report.performance={"sample_frames":frames.size(),"average_fps":frames.size()/maxf(total,.001),"worst_frame_ms":worst*1000,"static_memory_bytes":Performance.get_monitor(Performance.MEMORY_STATIC),"scope":"API29 x86_64 emulator; not a physical-device benchmark"}
 	game.set_physics_process(false);game.room=2;game.spawn_room();game.player.position=Vector2(650,520);game.interact_chest()
 	game.player.hp=73;game.potions=1;game.player.mana=47;game.save_run()
-	var checkpoint=FileAccess.open("user://android_checkpoint.json",FileAccess.WRITE);checkpoint.store_string("ready");checkpoint.close()
+	var checkpoint=FileAccess.open("user://android_checkpoint.json",FileAccess.WRITE);checkpoint.store_string(JSON.stringify({"loot":game.loot}));checkpoint.close()
 	await RenderingServer.frame_post_draw
 	report.checks.gameplay_frame_not_blank=frame_has_gameplay()
 	report.checks.chest_opened=game.room_events.has("MINE_CHEST_02")
