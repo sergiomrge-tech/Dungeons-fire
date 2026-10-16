@@ -45,6 +45,11 @@ jobs:
           set -o pipefail
           Godot_v4.6.1-stable_linux.x86_64 --headless --script tests/test_run_systems_v07.gd -- --qa 2>&1 | tee /tmp/df-v07.log
           if grep -E 'SCRIPT ERROR|ERROR:' /tmp/df-v07.log; then exit 1; fi
+      - name: Test mob patterns, dodges, area damage and interrupted combos
+        run: |
+          set -o pipefail
+          Godot_v4.6.1-stable_linux.x86_64 --headless --script tests/test_mob_patterns_v071.gd -- --qa 2>&1 | tee /tmp/df-mobs-v071.log
+          if grep -E 'SCRIPT ERROR|ERROR:' /tmp/df-mobs-v071.log; then exit 1; fi
       - name: Test real combat without forced enemy deaths
         run: |
           set -o pipefail

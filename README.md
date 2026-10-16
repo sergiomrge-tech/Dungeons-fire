@@ -1,6 +1,16 @@
-# Dungeons Fires: As Cinco Brasas - v0.7.0
+# Dungeons Fires: As Cinco Brasas - v0.7.1
 
 Repositório oficial independente: https://github.com/sergiomrge-tech/Dungeons-fire. Abra o `project.godot` na raiz deste repositório.
+
+## Padrões dos mobs v0.7.1
+
+- Carrasco de Cinza: preparação visível, salto comprometido com o ponto marcado e recuperação que permite contra-atacar.
+- Rastejante de Vidro: dois cortes independentes; o segundo pode ser evitado por movimento/esquiva ou cancelado ao interromper o inimigo. As poses acompanham cada corte.
+- Acólito da Brasa Fria: marca o chão antes de disparar e explode no ponto registrado mesmo quando o herói sai dele; o raio real de dano corresponde à marca.
+- Espectro do Sino: recua de verdade quando encurralado; projéteis espectrais só aplicam lentidão quando acertam um herói vulnerável.
+- Sentinela Ossária: defesa frontal resiste a interrupção durante a preparação, com faíscas de escudo; acertar as costas ou a recuperação abre a guarda.
+
+A identidade visual e os cinco atlas existentes foram preservados. Testes nativos em `tests/test_mob_patterns_v071.gd`; relatório em `docs/QA_v0_7_1.md`. Não foi gerado APK nesta etapa.
 
 ## Novos sistemas v0.7
 

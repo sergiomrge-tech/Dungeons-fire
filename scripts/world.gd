@@ -77,9 +77,14 @@ func tick(delta: float) -> void:
 						game.player.supreme=minf(100,game.player.supreme+4)
 					if not p.piercing:p.time=0;break
 		else:
+			if p.get("target",Vector2.INF) != Vector2.INF:
+				# An aimed mortar lands on the recorded ground point, even if the hero dodges away.
+				if p.time <= 2.35 or (p.target-old).dot(p.target-p.pos) <= 0:
+					detonate_ground_fire(p)
+				continue
 			if game.player!=null and game.player.hp>0 and game.player.position.distance_to(p.pos)<30:
-				game.player.hurt(p.damage,Vector2.ZERO,p.pos-p.velocity*.1)
-				if p.get("slow",false):game.player.slowed=maxf(game.player.slowed,1.25)
+				var landed: bool = game.player.hurt(p.damage,Vector2.ZERO,p.pos-p.velocity*.1)
+				if landed and p.get("slow",false):game.player.slowed=maxf(game.player.slowed,1.25)
 				if float(p.get("aoe",0))>0:
 					var radius=float(p.aoe)
 					fx(p.pos-Vector2(0,18),radius,Color("ff9a55"),.32)
@@ -90,11 +95,44 @@ func tick(delta: float) -> void:
 	queue_redraw()
 	overlay.queue_redraw()
 
-func missile(pos: Vector2, velocity: Vector2, damage: float, player: bool, color: Color, piercing: bool = false, style_override: String = "", aoe: float = 0, slow: bool = false) -> void:
+func missile(pos: Vector2, velocity: Vector2, damage: float, player: bool, color: Color, piercing: bool = false, style_override: String = "", aoe: float = 0, slow: bool = false, target: Vector2 = Vector2.INF) -> void:
 	if projectiles.size()>=48:projectiles.pop_front()
 	var style=style_override
 	if style=="":style="ember" if player and game.player!=null and game.player.kind=="maela" else "arrow"
-	projectiles.append({"style":style,"trail":[],"pos":pos,"velocity":velocity,"damage":damage,"player":player,"time":3.0,"color":color,"hit":[],"piercing":piercing,"aoe":aoe,"slow":slow})
+	projectiles.append({"style":style,"trail":[],"pos":pos,"velocity":velocity,"damage":damage,"player":player,"time":3.0,"color":color,"hit":[],"piercing":piercing,"aoe":aoe,"slow":slow,"target":target})
+
+func detonate_ground_fire(p: Dictionary) -> void:
+	p.time = 0
+	p.pos = p.target
+	var radius: float = float(p.aoe)
+	fx(p.target-Vector2(0,6),radius,Color("ff9a55"),.42)
+	vfx.emit("pillar",p.target,Color("ff8851"),radius,.42,1,0,.30)
+	if game.player != null and game.player.hp > 0 and game.player.position.distance_to(p.target) < radius and not game.room_layout.segment_blocked(p.target,game.player.position):
+		game.player.hurt(p.damage,Vector2.ZERO,p.target)
+
+func draw_mob_zone(enemy: DFActor) -> void:
+	if enemy.boss or enemy.mob_profile.is_empty(): return
+	var special: String = str(enemy.mob_profile.get("special",""))
+	var alpha: float = .60 + sin(clock*12)*.12
+	if special == "ground_fire":
+		draw_target_zone(enemy.aim,float(enemy.mob_profile.get("aoe",58)),Color(1,.45,.18,alpha))
+	elif special == "leap":
+		var color: Color = Color(1,.62,.24,alpha)
+		overlay.draw_line(enemy.attack_origin,enemy.aim,color,4,true)
+		draw_target_zone(enemy.aim,38,color)
+	elif special == "double_slash":
+		var color: Color = Color(.78,.53,1,alpha)
+		var origin: Vector2 = enemy.position+Vector2(enemy.facing*48,-4)
+		overlay.draw_arc(origin,32,0,TAU,24,color,2,true)
+		for i in range(2):
+			overlay.draw_line(origin+Vector2(-10+i*15,-12),origin+Vector2(-18+i*15,12),color,3,true)
+
+func draw_target_zone(pos: Vector2, radius: float, color: Color) -> void:
+	var fill: Color = color; fill.a *= .14
+	overlay.draw_circle(pos,radius,fill)
+	overlay.draw_arc(pos,radius,0,TAU,48,color,2.5,true)
+	overlay.draw_line(pos-Vector2(9,0),pos+Vector2(9,0),color,2,true)
+	overlay.draw_line(pos-Vector2(0,9),pos+Vector2(0,9),color,2,true)
 
 func fx(pos: Vector2, radius: float, color: Color, seconds: float = .4) -> void:
 	effects.append({"pos":pos,"radius":radius,"color":color,"time":seconds,"duration":seconds})
@@ -168,6 +206,11 @@ func draw_effects() -> void:
 		for enemy in game.enemies:
 			if enemy.hp>0 and enemy.state in ["windup","attack"] and not enemy.boss_profile.is_empty():
 				DFBossPatterns.draw_zone(overlay,enemy.boss_profile,.65+sin(clock*12)*.15,enemy.state=="attack")
+			elif enemy.hp>0 and enemy.state == "windup":
+				draw_mob_zone(enemy)
+		for p in projectiles:
+			if not p.player and p.get("target",Vector2.INF) != Vector2.INF:
+				draw_target_zone(p.target,float(p.aoe),Color(1,.45,.18,.75))
 	for e in effects:
 		var alpha = e.time/e.duration
 		var color: Color = e.color; color.a*=alpha

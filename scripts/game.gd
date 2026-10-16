@@ -581,17 +581,22 @@ func enemy_strike(a: DFActor) -> void:
 		var color=Color("ee7068")
 		if projectile=="spectral":color=Color("8edbff")
 		elif projectile=="fireball":color=Color("ff8851")
-		world.missile(a.position,vel,a.attack_power,false,color,false,projectile,float(a.mob_profile.get("aoe",0)),bool(a.mob_profile.get("slow",false)))
+		var ground_fire: bool = a.mob_profile.get("special", "") == "ground_fire"
+		if ground_fire: vel = (a.aim-a.position)/.65
+		world.missile(a.position,vel,a.attack_power,false,color,false,projectile,float(a.mob_profile.get("aoe",0)),bool(a.mob_profile.get("slow",false)),a.aim if ground_fire else Vector2.INF)
+		world.vfx.emit("muzzle",a.position-Vector2(0,60),color,36,.25,a.facing)
 		if a.boss and a.hp<a.max_hp*.5:
 			world.missile(a.position,vel.rotated(.12),a.attack_power*.8,false,Color("c2dceb"),false,projectile,float(a.mob_profile.get("aoe",0)),bool(a.mob_profile.get("slow",false)))
 			world.missile(a.position,vel.rotated(-.12),a.attack_power*.8,false,Color("c2dceb"),false,projectile,float(a.mob_profile.get("aoe",0)),bool(a.mob_profile.get("slow",false)))
 	else:
 		var reach=150.0 if a.boss else float(a.mob_profile.get("reach",89.0))
 		var depth=70.0 if a.boss else 45.0
-		world.fx(a.position+Vector2(a.facing*40,-12),reach*.5,Color(1,.35,.24),.28)
+		var slash_color: Color = Color("c58cff") if a.mob_profile.get("special","")=="double_slash" else Color("ff9958")
+		world.vfx.emit("slash",a.position-Vector2(0,44),slash_color,reach,.30,a.facing,1 if a.second_swing_done else 0,.16)
+		world.fx(a.position+Vector2(a.facing*40,-12),reach*.5,slash_color,.28)
 		var diff: Vector2=player.position-a.position
 		if absf(diff.x)<reach and absf(diff.y)<depth and diff.x*a.facing>-20 and not room_layout.segment_blocked(a.position,player.position):
-			var strike_scale=1.25 if a.boss and a.hp<a.max_hp*.5 else (1.22 if a.mob_profile.get("special","")=="double_slash" else 1.0)
+			var strike_scale=1.25 if a.boss and a.hp<a.max_hp*.5 else (.70 if a.mob_profile.get("special","")=="double_slash" else 1.0)
 			player.hurt(a.attack_power*strike_scale,Vector2(a.facing*13,0),a.position)
 			if a.mob_profile.get("special","")=="double_slash":world.fx(a.position+Vector2(a.facing*67,-9),37,Color("c58cff"),.22)
 		if a.boss and a.hp<a.max_hp*.5:

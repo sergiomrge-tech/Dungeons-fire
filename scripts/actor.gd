@@ -45,6 +45,9 @@ var size_scale: float = 1.35
 var mob_profile: Dictionary = {}
 var marked: float = 0
 var route_reward: bool = false
+var attack_origin: Vector2 = Vector2.ZERO
+var leap_direction: Vector2 = Vector2.RIGHT
+var second_swing_done: bool = false
 
 func setup(owner_game, actor_kind: String, player: bool, life: float, damage: float, boss_actor: bool = false, mob_data: Dictionary = {}) -> void:
 	game = owner_game; kind = actor_kind; is_player = player; boss = boss_actor
@@ -57,6 +60,12 @@ func setup(owner_game, actor_kind: String, player: bool, life: float, damage: fl
 
 func start_action(name: String, action_type: String, seconds: float) -> void:
 	rush_hit=false
+	if name == "windup":
+		attack_origin = position
+		leap_direction = (aim-position).normalized()
+		if leap_direction.length_squared() < .01: leap_direction = Vector2(facing,0)
+	if name == "attack":
+		second_swing_done = false
 	if name!="attack":pending_attack=false
 	state = name; attack_kind = action_type; duration = seconds; timer = seconds; swing_done = false
 	if game!=null and game.world!=null and game.world.vfx!=null:game.world.vfx.action_started(self,name,action_type,seconds)
@@ -125,11 +134,13 @@ func tick(delta: float) -> void:
 		timer -= delta
 		if state=="dodge": position=game.move_actor(position,direction*530*delta)
 		if not is_player and mob_profile.get("special", "") == "leap" and state == "attack" and not rush_hit:
-			var pounce = (aim-position).normalized()
-			position = game.move_actor(position, pounce * 390 * delta)
-			if game.player.position.distance_to(position) < 48:
+			# Commit to the telegraphed destination; never home in after takeoff.
+			var remaining: float = maxf(0.0, (aim-position).dot(leap_direction))
+			position = game.move_actor(position, leap_direction * minf(390 * delta, remaining))
+			if remaining <= 1: rush_hit = true
+			if game.player.position.distance_to(position) < 48 and not game.room_layout.segment_blocked(position,game.player.position):
 				rush_hit = true
-				game.player.hurt(attack_power, Vector2(pounce.x*20,-3), position)
+				game.player.hurt(attack_power, Vector2(leap_direction.x*20,-3), position)
 				game.world.fx(position-Vector2(0,22),52,Color("ef8650"),.34)
 		if state=="guard":guard_age+=delta
 		if is_player and state=="cast" and kind=="varek" and attack_kind=="skill0" and timer>duration*.50:
@@ -138,15 +149,21 @@ func tick(delta: float) -> void:
 			position=game.move_actor(position,Vector2(facing*boss_profile.travel/duration,0)*delta)
 			if not rush_hit and game.player!=null and absf(game.player.position.x-position.x)<45 and absf(game.player.position.y-position.y)<36:
 				rush_hit=true;game.player.hurt(attack_power*boss_profile.damage,Vector2(facing*18,0),position)
+		if not is_player and state == "attack" and mob_profile.get("special", "") == "double_slash" and not second_swing_done and duration-timer >= .82:
+			second_swing_done = true
+			game.enemy_strike(self)
 		if state=="windup" and timer<=0:
-			start_action("attack","enemy",float(boss_profile.attack_time) if not boss_profile.is_empty() else .55)
-		elif state in ["attack","cast"] and not swing_done and timer<duration*.55:
+			var attack_seconds: float = float(boss_profile.attack_time) if not boss_profile.is_empty() else float(mob_profile.get("attack_time",.55))
+			start_action("attack","enemy",attack_seconds)
+		elif state in ["attack","cast"] and not swing_done and timer<duration*(.78 if not is_player and mob_profile.get("special", "") == "double_slash" else .55):
 			swing_done = true
 			if is_player: game.player_strike(self,attack_kind)
 			elif mob_profile.get("special", "") != "leap": game.enemy_strike(self)
 		if timer<=0:
 			if boss and state=="attack" and not boss_profile.is_empty():
 				start_action("recover","recover",boss_profile.recovery);cooldown=maxf(cooldown,timer+.25)
+			elif not is_player and state == "attack" and mob_profile.has("recovery"):
+				start_action("recover","recover",float(mob_profile.recovery))
 			else:state = "idle"
 			if is_player and pending_attack:
 				pending_attack = false; request_attack()
@@ -185,11 +202,12 @@ func tick_enemy(delta: float) -> void:
 			boss_profile=DFBossPatterns.profile(kind,boss_phase,boss_step,position,aim,facing);boss_step+=1
 			start_action("windup","enemy",boss_profile.windup)
 		else:start_action("windup","enemy",float(mob_profile.get("windup",.70 if not boss else 1.0)))
-		cooldown = (1.5 if not boss else 1.7)+float(id%3)*.15
+		cooldown = float(mob_profile.get("cooldown",1.5 if not boss else 1.7))+float(id%3)*.15
 	else:
 		var target = diff
-		if ranged and absf(diff.x)<180: target.x = -diff.x
-		if absf(diff.x)<reach and absf(diff.y)<28: target = Vector2.ZERO
+		if ranged and absf(diff.x)<float(mob_profile.get("keep_distance",180)):
+			target.x = -diff.x if absf(diff.x)>1 else -float(facing)*40
+		elif absf(diff.x)<reach and absf(diff.y)<28: target = Vector2.ZERO
 		state = "run" if target.length()>5 else "idle"
 		if target.length()>5:
 			var speed = (65.0 if boss else float(mob_profile.get("speed",94.0))) * (.55 if slowed>0 else 1.0)
@@ -209,6 +227,7 @@ func hurt(amount: float, push: Vector2 = Vector2.ZERO, source: Vector2 = Vector2
 	var received = maxf(1,amount*100/(100+defense))
 	if not is_player and kind=="bone_sentinel" and mob_profile.get("special", "")=="frontal_guard" and state not in ["attack","recover","hurt"] and source!=Vector2.INF and (source.x-position.x)*facing>=-8:
 		received *= .48
+		game.world.vfx.emit("parry",position-Vector2(0,48),Color("d4e4f4"),32,.22,facing)
 	if not is_player and marked>0:
 		received *= 1.18
 	if is_player and game.relic_effect()=="resist":received*=.9
@@ -225,7 +244,9 @@ func hurt(amount: float, push: Vector2 = Vector2.ZERO, source: Vector2 = Vector2
 		else: game.on_player_dead()
 	else:
 		if not boss:
-			start_action("hurt","hurt",.19); invuln=.12
+			var blocking: bool = mob_profile.get("special", "") == "frontal_guard" and state in ["idle","run","windup"] and source != Vector2.INF and (source.x-position.x)*facing >= -8
+			if not blocking: start_action("hurt","hurt",.19)
+			invuln=.12
 		else:
 			phase += received*stagger_multiplier
 			stagger_multiplier=1
@@ -292,6 +313,10 @@ func pose_transform() -> Dictionary:
 	var rotation=0.0
 	var scale=Vector2.ONE
 	var t=clampf(1-timer/maxf(duration,.001),0,1)
+	if not is_player and mob_profile.get("special", "") == "double_slash" and state == "attack":
+		# Each damage window has its own anticipation, slash and return pose.
+		t = clampf((duration-timer)/.48,0,1) if duration-timer < .5 else clampf((duration-timer-.5)/.55,0,1)
+	if not is_player and kind == "bell_wraith": offset.y -= 3.0+sin(anim_clock*4.0)*2.5
 	if state=="run":
 		offset.y=-absf(sin(anim_clock*12))*2
 		rotation=sin(anim_clock*12)*.012
@@ -307,9 +332,14 @@ func pose_transform() -> Dictionary:
 	elif state=="cast":
 		if kind=="varek":offset=Vector2(facing*sin(t*PI)*8,-sin(t*PI)*2);rotation=sin(t*PI)*.08
 		else:offset.y=-sin(t*PI)*4;rotation=-.035*sin(t*PI)
+	elif state=="windup" and mob_profile.get("special", "") == "leap":
+		offset.y=4*t;scale=Vector2(1+t*.06,1-t*.08)
 	elif state=="guard":rotation=-.035;offset.x=-facing*2
 	elif state=="dodge":rotation=.22;offset.y=7
 	elif state=="hurt":rotation=-.10*minf(1,timer/.12)
+	if state == "attack" and mob_profile.get("special", "") == "leap":
+		offset.y -= sin(t*PI)*19
+		rotation = -.08*sin(t*PI)
 	return {"offset":offset,"rotation":rotation,"scale":scale}
 
 func visual_frame() -> int:
@@ -319,6 +349,9 @@ func visual_frame() -> int:
 		"windup": return 4
 		"attack":
 			var t = 1.0 - timer / maxf(duration, .01)
+			if mob_profile.get("special", "") == "double_slash":
+				var elapsed: float = duration-timer
+				t = clampf(elapsed/.48,0,1) if elapsed < .5 else clampf((elapsed-.5)/.55,0,1)
 			return 4 if t < .42 else (5 if t < .72 else 6)
 		"cast": return (4 if timer>duration*.55 else 5) if kind=="varek" else 7
 		"roar": return 7
